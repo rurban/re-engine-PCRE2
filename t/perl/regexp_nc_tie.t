@@ -1,4 +1,7 @@
-use Test::More tests => 12;
+use Test::More
+  $] >= 5.014 ? (tests => 12)
+              : (skip_all => "named captures only since 5.14");
+
 use re::engine::PCRE2;
 
 "hlagh" =~ /

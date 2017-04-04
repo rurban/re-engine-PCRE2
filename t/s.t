@@ -2,7 +2,8 @@ use strict;
 use Test::More tests => 10;
 use re::engine::PCRE2;
 
-my $_;
+# illegal since 5.24
+#my $_;
 
 $_ = "ab";
 s/a//;

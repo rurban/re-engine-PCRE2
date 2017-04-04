@@ -15,15 +15,12 @@ BEGIN {
   XSLoader::load;
 }
 
-sub import
-{
+sub import {
   $^H{regcomp} = ENGINE;
 }
 
-sub unimport
-{
-  delete $^H{regcomp}
-  if $^H{regcomp} == ENGINE;
+sub unimport {
+  delete $^H{regcomp} if $^H{regcomp} == ENGINE;
 }
 
 1;
@@ -46,6 +43,9 @@ re::engine::PCRE2 - PCRE2 regular expression engine
 
 Replaces perl's regex engine in a given lexical scope with PCRE2
 regular expressions provided by libpcre.
+
+This provides jit support and faster matching, but may fail in
+cornercases.
 
 =head1 AUTHORS
 
