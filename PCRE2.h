@@ -1,7 +1,7 @@
 #define SAVEPVN(p,n)	((p) ? savepvn(p,n) : NULL)
 
 START_EXTERN_C
-EXTERN_C const regexp_engine pcre_engine;
+EXTERN_C const regexp_engine pcre2_engine;
 #if PERL_VERSION < 12
 EXTERN_C REGEXP * PCRE2_comp(pTHX_ const SV * const, const U32);
 #else
@@ -33,9 +33,9 @@ EXTERN_C REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
 #endif
 END_EXTERN_C
 
-void PCRE2_make_nametable(regexp * const, pcre * const, const int);
+void PCRE2_make_nametable(regexp * const, pcre2_code * const, const int);
 
-const regexp_engine pcre_engine = {
+const regexp_engine pcre2_engine = {
     PCRE2_comp,
     PCRE2_exec,
     PCRE2_intuit,

@@ -2,8 +2,11 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#include <pcre.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 #include "PCRE2.h"
+
+static char jittarget[64];
 
 #if PERL_VERSION > 10
 #define RegSV(p) SvANY(p)
@@ -20,7 +23,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 {
     REGEXP *rx;
     regexp *re;
-    pcre   *ri;
+    pcre2_code *ri = NULL;
 
     STRLEN plen;
     char  *exp = SvPV((SV*)pattern, plen);
@@ -28,24 +31,26 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     U32 extflags = flags;
     SV * wrapped = newSVpvn("(?", 2), * wrapped_unset = newSVpvn("", 0);
 
-    /* pcre_compile */
-    const char *error;
-    int erroffset;
+    /* pcre2_compile */
+    int errcode;
+    size_t erroffset;
 
-    /* pcre_fullinfo */
-    unsigned long int length;
+    /* pcre2_pattern_info */
+    unsigned long length;
     int nparens;
 
     /* pcre_compile */
-    int options = PCRE_DUPNAMES;
+    int options = PCRE2_DUPNAMES;
 
-    /* named captures (since 5.14) */
+#if PERL_VERSION >= 14
+    /* named captures */
     int namecount;
+#endif
 
     sv_2mortal(wrapped);
     sv_2mortal(wrapped_unset);
 
-    /* C<split " ">, bypass the PCRE engine alltogether and act as perl does */
+    /* C<split " ">, bypass the PCRE2 engine alltogether and act as perl does */
     if (flags & RXf_SPLIT && plen == 1 && exp[0] == ' ')
         extflags |= (RXf_SKIPWHITE|RXf_WHITE);
 
@@ -61,35 +66,52 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     else if (plen == 3 && strnEQ("\\s+", exp, 3))
         extflags |= RXf_WHITE;
 
-    /* Perl modifiers to PCRE flags, /s is implicit and /p isn't used
+    /* Perl modifiers to PCRE2 flags, /s is implicit and /p isn't used
      * but they pose no problem so ignore them */
     if (flags & RXf_PMf_FOLD)
-        options |= PCRE_CASELESS;  /* /i */
+        options |= PCRE2_CASELESS;  /* /i */
     if (flags & RXf_PMf_EXTENDED)
-        options |= PCRE_EXTENDED;  /* /x */
+        options |= PCRE2_EXTENDED;  /* /x */
     if (flags & RXf_PMf_MULTILINE)
-        options |= PCRE_MULTILINE; /* /m */
-
+        options |= PCRE2_MULTILINE; /* /m */
+#ifdef RXf_PMf_NOCAPTURE
+    if (flags & RXf_PMf_NOCAPTURE)
+        options |= PCRE2_NO_AUTO_CAPTURE; /* ?: */
+#endif
+#ifdef RXf_PMf_EXTENDED_MORE
+    if (flags & RXf_PMf_EXTENDED_MORE) {
+        Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "/xx ignore by pcre2");
+        options |= PCRE2_EXTENDED;
+    }
+#endif
+#ifdef RXf_PMf_CHARSET
+    if (flags & RXf_PMf_CHARSET) {
+        Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "charset option ignore by pcre2");
+    }
+#endif
+    /* TODO: e r l u d g c */
 
     /* The pattern is known to be UTF-8. Perl wouldn't turn this on unless it's
-     * a valid UTF-8 sequence so tell PCRE not to check for that */
+     * a valid UTF-8 sequence so tell PCRE2 not to check for that */
 #ifdef RXf_UTF8
     if (flags & RXf_UTF8)
 #else
     if (SvUTF8(pattern))
 #endif
-        options |= (PCRE_UTF8|PCRE_NO_UTF8_CHECK);
+        options |= (PCRE2_UTF|PCRE2_NO_UTF_CHECK);
 
-    ri = pcre_compile(
-        exp,          /* pattern */
+    ri = pcre2_compile(
+        exp, plen,    /* pattern */
         options,      /* options */
-        &error,       /* errors */
+        &errcode,     /* errors */
         &erroffset,   /* error offset */
-        NULL          /* use default character tables */
+        NULL          /* &pcre2_compile_context */
     );
 
     if (ri == NULL) {
-        croak("PCRE compilation failed at offset %d: %s\n", erroffset, error);
+        PCRE2_UCHAR buf[256];
+        pcre2_get_error_message(errcode, buf, sizeof(buf));
+        croak("PCRE2 compilation failed at offset %d: %s\n", erroffset, buf);
         sv_2mortal(wrapped);
         return NULL;
     }
@@ -102,13 +124,19 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
 
     re = RegSV(rx);
+    re->intflags = options;
     re->extflags = extflags;
-    re->engine   = &pcre_engine;
+    re->engine   = &pcre2_engine;
 
     /* qr// stringification, TODO: (?flags:pattern) */
-    sv_catpvn(flags & RXf_PMf_FOLD ? wrapped : wrapped_unset, "i", 1);
-    sv_catpvn(flags & RXf_PMf_EXTENDED ? wrapped : wrapped_unset, "x", 1);
-    sv_catpvn(flags & RXf_PMf_MULTILINE ? wrapped : wrapped_unset, "m", 1);
+    sv_catpvn(flags & RXf_PMf_SINGLELINE ? wrapped : wrapped_unset, "s", 1);
+    sv_catpvn(flags & RXf_PMf_FOLD       ? wrapped : wrapped_unset, "i", 1);
+    sv_catpvn(flags & RXf_PMf_EXTENDED   ? wrapped : wrapped_unset, "x", 1);
+    sv_catpvn(flags & RXf_PMf_MULTILINE  ? wrapped : wrapped_unset, "m", 1);
+#ifdef RXf_PMf_NOCAPTURE
+    sv_catpvn(flags & RXf_PMf_NOCAPTURE  ? wrapped : wrapped_unset, "n", 1);
+#endif
+    /* TODO: e r l u d g c */
 
     if (SvCUR(wrapped_unset)) {
       sv_catpvn(wrapped, "-", 1);
@@ -129,7 +157,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #else
     RX_WRAPPED(rx) = savepvn(SvPVX(wrapped), SvCUR(wrapped));
     RX_WRAPLEN(rx) = SvCUR(wrapped);
-    //Perl_sv_dump(rx);
+    /* Perl_sv_dump(rx); */
 #endif
 
 #if PERL_VERSION == 10
@@ -143,14 +171,9 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 
     /* If named captures are defined make rx->paren_names */
 #if PERL_VERSION >= 14
-    pcre_fullinfo(
-        ri,
-        NULL,
-        PCRE_INFO_NAMECOUNT,
-        &namecount
-    );
+    (void)pcre2_pattern_info(ri, PCRE2_INFO_NAMECOUNT, &namecount);
 
-    if (namecount <= 0) {
+    if ((namecount <= 0) || (options | PCRE2_NO_AUTO_CAPTURE)) {
         re->paren_names = NULL;
     } else {
         PCRE2_make_nametable(re, ri, namecount);
@@ -158,21 +181,11 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
 
     /* set up space for the capture buffers */
-    pcre_fullinfo(
-        ri,
-        NULL,
-        PCRE_INFO_SIZE,
-        &length
-    );
-    re->intflags = (U32)length;
+    (void)pcre2_pattern_info(ri, PCRE2_INFO_SIZE, &length);
+    re->minlen = (U32)length;
 
     /* Check how many parens we need */
-    pcre_fullinfo(
-        ri,
-        NULL,
-        PCRE_INFO_CAPTURECOUNT,
-        &nparens
-    );
+    (void)pcre2_pattern_info(ri, PCRE2_INFO_CAPTURECOUNT, &nparens);
 
     re->nparens = re->lastparen = re->lastcloseparen = nparens;
     Newxz(re->offs, nparens + 1, regexp_paren_pair);
@@ -210,40 +223,39 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 #endif  
 {
     I32 rc;
-    int *ovector;
+    PCRE2_SIZE *ovector;
+    pcre2_match_data *match_data;
     I32 i;
     int nparens;
     regexp * re = RegSV(rx);
-    pcre *ri = re->pprivate;
+    pcre2_code *ri = re->pprivate;
 
-    Newx(ovector, re->intflags, int);
-
-    rc = (I32)pcre_exec(
+    match_data = pcre2_match_data_create_from_pattern(ri, NULL);
+    rc = (I32)pcre2_match(
         ri,
-        NULL,
         stringarg,
-        strend - strbeg,    /* length */
-        stringarg - strbeg, /* offset */
-        0,
-        ovector,
-        re->intflags /* XXX: was 30 */
+        strend - strbeg,      /* length */
+        stringarg - strbeg,   /* offset */
+        re->intflags,         /* the options (again) */
+        match_data,
+        NULL                  /* pcre2_match_context */
     );
 
     /* Matching failed */
     if (rc < 0) {
-        if (rc != PCRE_ERROR_NOMATCH) {
-            Safefree(ovector);
-            croak("PCRE error %d\n", rc);
+        pcre2_match_data_free(match_data);
+        pcre2_code_free(ri);
+        if (rc != PCRE2_ERROR_NOMATCH) {
+            croak("PCRE2 error %d\n", rc);
         }
-
-
-        Safefree(ovector);
         return 0;
     }
 
     re->subbeg = strbeg;
     re->sublen = strend - strbeg;
 
+    rc = pcre2_get_ovector_count(match_data);
+    ovector = pcre2_get_ovector_pointer(match_data);
     for (i = 0; i < rc; i++) {
         re->offs[i].start = ovector[i * 2];
         re->offs[i].end   = ovector[i * 2 + 1];
@@ -254,11 +266,8 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         re->offs[i].end   = -1;
     }
 
-
-
     /* XXX: nparens needs to be set to CAPTURECOUNT */
-
-    Safefree(ovector);
+    pcre2_match_data_free(match_data);
     return 1;
 }
 
@@ -286,7 +295,7 @@ PCRE2_intuit(pTHX_ REGEXP * const rx, SV * sv, const char *strbeg,
 SV *
 PCRE2_checkstr(pTHX_ REGEXP * const rx)
 {
-	PERL_UNUSED_ARG(rx);
+    PERL_UNUSED_ARG(rx);
     return NULL;
 }
 
@@ -294,13 +303,13 @@ void
 PCRE2_free(pTHX_ REGEXP * const rx)
 {
     regexp * re = RegSV(rx);
-    pcre_free(re->pprivate);
+    pcre2_code_free(re->pprivate);
 }
 
 void *
 PCRE2_dupe(pTHX_ REGEXP * const rx, CLONE_PARAMS *param)
 {
-	PERL_UNUSED_ARG(param);
+    PERL_UNUSED_ARG(param);
     regexp * re = RegSV(rx);
     return re->pprivate;
 }
@@ -308,8 +317,8 @@ PCRE2_dupe(pTHX_ REGEXP * const rx, CLONE_PARAMS *param)
 SV *
 PCRE2_package(pTHX_ REGEXP * const rx)
 {
-	PERL_UNUSED_ARG(rx);
-	return newSVpvs("re::engine::PCRE2");
+    PERL_UNUSED_ARG(rx);
+    return newSVpvs("re::engine::PCRE2");
 }
 
 /*
@@ -318,7 +327,7 @@ PCRE2_package(pTHX_ REGEXP * const rx)
 
 #if PERL_VERSION >= 14
 void
-PCRE2_make_nametable(regexp * const re, pcre * const ri, const int namecount)
+PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const int namecount)
 {
     unsigned char *name_table, *tabptr;
     int name_entry_size;
@@ -326,20 +335,10 @@ PCRE2_make_nametable(regexp * const re, pcre * const ri, const int namecount)
     IV j;
 
     /* The name table */
-    pcre_fullinfo(
-        ri,
-        NULL,
-        PCRE_INFO_NAMETABLE,
-        &name_table
-     );
+    (void)pcre2_pattern_info(ri, PCRE2_INFO_NAMETABLE, &name_table);
 
     /* Size of each entry */
-    pcre_fullinfo(
-        ri,
-        NULL,
-        PCRE_INFO_NAMEENTRYSIZE,
-        &name_entry_size
-     );
+    (void)pcre2_pattern_info(ri, PCRE2_INFO_NAMEENTRYSIZE, &name_entry_size);
 
     re->paren_names = newHV();
     tabptr = name_table;
@@ -393,4 +392,19 @@ void
 ENGINE(...)
 PROTOTYPE:
 PPCODE:
-	XPUSHs(sv_2mortal(newSViv(PTR2IV(&pcre_engine))));
+    XPUSHs(sv_2mortal(newSViv(PTR2IV(&pcre2_engine))));
+
+void
+JIT(...)
+PROTOTYPE:
+PPCODE:
+    uint32_t jit;
+    pcre2_config(PCRE2_CONFIG_JIT, &jit);
+    XPUSHs(sv_2mortal(newSViv(jit ? 1 : 0)));
+
+void
+JITTARGET(...)
+PROTOTYPE:
+PPCODE:
+    if (pcre2_config(PCRE2_CONFIG_JITTARGET, &jittarget) >= 0)
+        XPUSHs(sv_2mortal(newSVpvn(jittarget, strlen(jittarget))));

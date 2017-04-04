@@ -24,7 +24,7 @@ my %WriteMakefileArgs = (
   },
   'EXE_FILES' => [],
   'LIBS' => [
-    '-lpcre'
+    '-lpcre2-8'
   ],
   'LICENSE' => 'perl',
   'test' => {
