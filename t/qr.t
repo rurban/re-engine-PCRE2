@@ -4,4 +4,4 @@ use re::engine::PCRE2;
 my $re = qr/aoeu/;
 
 isa_ok($re, "re::engine::PCRE2");
-is("$re", "(?-ixm:aoeu)");
+is("$re", "(?:aoeu)");
