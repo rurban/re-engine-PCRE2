@@ -41,6 +41,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 
     /* pcre_compile */
     int options = PCRE2_DUPNAMES;
+    /*int have_jit;*/
 
 #if PERL_VERSION >= 14
     /* named captures */
@@ -80,13 +81,28 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
 #ifdef RXf_PMf_EXTENDED_MORE
     if (flags & RXf_PMf_EXTENDED_MORE) {
-        Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "/xx ignore by pcre2");
+        Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "/xx ignored by pcre2");
         options |= PCRE2_EXTENDED;
     }
 #endif
 #ifdef RXf_PMf_CHARSET
     if (flags & RXf_PMf_CHARSET) {
-        Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "charset option ignore by pcre2");
+      regex_charset cs;
+      if ((cs = get_regex_charset(flags)) != REGEX_DEPENDS_CHARSET) {
+        switch (cs) {
+        case REGEX_UNICODE_CHARSET:
+          options |= (PCRE2_UTF|PCRE2_NO_UTF_CHECK);
+          break;
+        case REGEX_ASCII_RESTRICTED_CHARSET:
+          options |= PCRE2_NEVER_UCP; /* /a */
+          break;
+        case REGEX_ASCII_MORE_RESTRICTED_CHARSET:
+          options |= PCRE2_NEVER_UTF; /* /aa */
+          break;
+        default:
+          Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "local charset option ignored by pcre2");
+        }
+      }
     }
 #endif
     /* TODO: e r l u d g c */
@@ -115,6 +131,11 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         sv_2mortal(wrapped);
         return NULL;
     }
+#ifdef HAVE_JIT
+    /* pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
+    if (have_jit) */
+    pcre2_jit_compile(ri, PCRE2_JIT_COMPLETE); /* no partial matches */
+#endif
 
 #if PERL_VERSION > 10
     rx = (REGEXP*) newSV_type(SVt_REGEXP);
@@ -210,6 +231,18 @@ REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
 }
 #endif
 
+#ifdef HAVE_JIT
+static pcre2_jit_stack *jit_stack;
+static pcre2_match_context *match_context;
+
+/* default is 32k already */
+static pcre2_jit_stack *jit_stack(void)
+{
+    if (!jit_stack)
+        jit_stack = pcre2_jit_stack_create(32*1024, 1024*1024, NULL);
+    return jit_stack;
+}
+#endif
 
 I32
 #if PERL_VERSION < 20
@@ -223,27 +256,47 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 #endif  
 {
     I32 rc;
+    I32 i;
+    int have_jit;
     PCRE2_SIZE *ovector;
     pcre2_match_data *match_data;
-    I32 i;
-    int nparens;
     regexp * re = RegSV(rx);
     pcre2_code *ri = re->pprivate;
 
     match_data = pcre2_match_data_create_from_pattern(ri, NULL);
-    rc = (I32)pcre2_match(
-        ri,
-        stringarg,
-        strend - strbeg,      /* length */
-        stringarg - strbeg,   /* offset */
-        re->intflags,         /* the options (again) */
-        match_data,
-        NULL                  /* pcre2_match_context */
-    );
+#ifdef HAVE_JIT
+    pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
+    if (have_jit) {
+        match_context = pcre2_match_context_create(NULL);
+        pcre2_jit_stack_assign(match_context, NULL, NULL);
+        rc = (I32)pcre2_jit_match(
+            ri,
+            stringarg,
+            strend - strbeg,      /* length */
+            stringarg - strbeg,   /* offset */
+            re->intflags,         /* the options (again) */
+            match_data,           /* block for storing the result */
+            match_context
+        );
+    } else
+#endif
+        rc = (I32)pcre2_match(
+            ri,
+            stringarg,
+            strend - strbeg,      /* length */
+            stringarg - strbeg,   /* offset */
+            re->intflags,         /* the options (again) */
+            match_data,           /* block for storing the result */
+            NULL                  /* use default match context */
+        );
 
     /* Matching failed */
     if (rc < 0) {
         pcre2_match_data_free(match_data);
+#ifdef HAVE_JIT
+        if (have_jit)
+            pcre2_match_context_free(match_context);
+#endif
         pcre2_code_free(ri);
         if (rc != PCRE2_ERROR_NOMATCH) {
             croak("PCRE2 error %d\n", rc);
@@ -268,6 +321,10 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
     /* XXX: nparens needs to be set to CAPTURECOUNT */
     pcre2_match_data_free(match_data);
+#ifdef HAVE_JIT
+    if (have_jit)
+        pcre2_match_context_free(match_context);
+#endif
     return 1;
 }
 
