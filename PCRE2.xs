@@ -185,7 +185,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #else
     RX_WRAPPED(rx) = savepvn(SvPVX(wrapped), SvCUR(wrapped));
     RX_WRAPLEN(rx) = SvCUR(wrapped);
-    DEBUG_r(Perl_sv_dump((SV*)rx));
+    DEBUG_r(sv_dump((SV*)rx));
 #endif
 
 #if PERL_VERSION == 10
@@ -230,7 +230,7 @@ REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
     PERL_UNUSED_ARG(old_re);
     PERL_UNUSED_ARG(is_bare_re);
     PERL_UNUSED_ARG(pm_flags);
-    return PCRE2_comp(patternp ? *patternp : cSVOPx_sv(expr), orig_rx_flags);
+    return PCRE2_comp(aTHX_ patternp ? *patternp : cSVOPx_sv(expr), orig_rx_flags);
 }
 #endif
 
