@@ -1,5 +1,10 @@
 Revision history for re::engine::PCRE2
 
+0.02  rurban
+
+    - Enable the full perl regexp testsuite.
+    Only /g regexp's are failing.
+
 0.01 Wed Apr 5 11:40:18 2017 +0200 rurban
 
     - Started from re-engine-PCRE.

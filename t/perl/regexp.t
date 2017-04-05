@@ -1,6 +1,6 @@
 #!./perl
 
-use Test::More skip_all => "TODO";
+use Test::More;
 
 # The tests are in a separate file 't/op/re_tests'.
 # Each line in that file is a separate test.
@@ -76,9 +76,14 @@ my $test;
 my $skip_rest;
 
 
-# Tests known to fail under PCRE
+# Tests known to fail under PCRE2
 my %pcre_fail;
 my @pcre_fail = (
+    # TODO: new pcre2 fails
+    301, 353, 357,
+    523,524,589,590,594,597,599,
+    832,873,
+  
     # Pathological patterns that run into PCRE_ERROR_MATCHLIMIT
     813 .. 830,
 
