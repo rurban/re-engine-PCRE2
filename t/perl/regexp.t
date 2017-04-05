@@ -203,9 +203,12 @@ EOFCODE
 	    # Probably we should annotate specific tests with which warnings
 	    # categories they're known to trigger, and hence should be
 	    # disabled just for that test
-	    no warnings qw(uninitialized regexp);
-        eval "BEGIN { \$^H{regcomp} = re::engine::PCRE2->ENGINE; }; $code"
-        #eval $code; # use perl's engine
+          no warnings qw(uninitialized regexp);
+          if ($INC{'re/engine/PCRE2.pm'}) {
+            eval "BEGIN { \$^H{regcomp} = re::engine::PCRE2->ENGINE; }; $code"
+          } else {
+            eval $code; # use perl's engine
+          }
 	}
 	chomp( my $err = $@ );
 	if ($result eq 'c' && $err) {

@@ -45,7 +45,8 @@ Replaces perl's regex engine in a given lexical scope with PCRE2
 regular expressions provided by libpcre2-8.
 
 This provides jit support and faster matching, but may fail in
-cornercases.
+cornercases, esp. /g matching. It is typically 10% faster then
+the core regex engine.
 
 Note that some packaged libpcre2-8 libraries do not enable the jit
 compiler. C<cmake -DPCRE2_SUPPORT_JIT=ON>
