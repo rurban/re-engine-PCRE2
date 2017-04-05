@@ -7,7 +7,7 @@ use ExtUtils::MakeMaker 6.31;
 my %WriteMakefileArgs = (
   'NAME' => 're::engine::PCRE2',
   'VERSION_FROM' => 'PCRE2.pm',
-  'ABSTRACT' => 'PCRE2 regular expression engine',
+  'ABSTRACT' => 'PCRE2 regular expression engine with jit',
   'AUTHOR' => 'Reini Urban <rurban@cpan.org>',
   'BUILD_REQUIRES' => {
     'Data::Dumper' => '0',
@@ -18,8 +18,9 @@ my %WriteMakefileArgs = (
     'ExtUtils::MakeMaker' => '6.31'
   },
   'DISTNAME' => 're-engine-PCRE2',
-  dist	 => {
-    PREOP	=> 'pod2markdown $(VERSION_FROM) | tee README.md >$(DISTVNAME)/README.md; chmod -R u=rwX,go=rX . ;',
+  'dist' => {
+    PREOP	=> 'pod2markdown $(VERSION_FROM) | tee README.md >$(DISTVNAME)/README.md;'
+                  .' chmod -R u=rwX,go=rX . ;',
     COMPRESS	=> 'gzip -9v',
     SUFFIX	=> '.gz',
   },
@@ -29,7 +30,8 @@ my %WriteMakefileArgs = (
   'LICENSE' => 'perl',
   'test' => {
     'TESTS' => 't/*.t t/perl/*.t'
-  }
+  },
+  'SIGN' => 1,
 );
 
 
