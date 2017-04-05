@@ -1,5 +1,16 @@
 language: perl
 sudo: false
+dist: trusty
+cache:
+  ccache: true
+  #directories:
+  #  - $HOME/amd64
+addons:
+  apt:
+    packages:
+      - cmake
+#     - libpcre2-dev
+
 perl:
   - "5.10"
   - "5.12"
@@ -17,15 +28,22 @@ branches:
   except:
   - /^v?[0-9]+\.[0-9]+/
 
-addons:
-  apt:
-    packages:
-      - libpcre2-dev
-
 before_install:
-  - mkdir /home/travis/bin || true
-  - ln -s `which true` /home/travis/bin/cpansign
-  - eval $(curl https://travis-perl.github.io/init) --auto
+  - mkdir $HOME/bin || true
+  - ln -s `which true` $HOME/bin/cpansign
+  #- wget http://archive.ubuntu.com/ubuntu/pool/universe/p/pcre2/pcre2_10.22.orig.tar.gz
+  #- tar xfz pcre2_10.22.orig.tar.gz
+  #- cd pcre2-10.22
+  - git clone --depth=1 git://github.com/rurban/pcre
+  - cd pcre
+  - CFLAGS=-fPIC cmake -DPCRE2_SUPPORT_JIT=ON -DCMAKE_INSTALL_PREFIX=$HOME/amd64 .
+  - make -s -j4
+  - make install
+  - cd ..
+  - eval $(curl https://travis-perl.github.io/init) --perl
+
+script:
+  - perl Makefile.PL PREFIX=$HOME/amd64 && make test LDLOADLIBS="-L$HOME/amd64/lib -lpcre2-8"
 
 install:
   - export AUTOMATED_TESTING=1 HARNESS_TIMER=1 AUTHOR_TESTING=0 RELEASE_TESTING=0

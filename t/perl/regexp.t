@@ -80,10 +80,17 @@ my $skip_rest;
 my %pcre_fail;
 my @pcre_fail = (
     # TODO: new pcre2 fails
-    301, 353, 357,
-    523,524,589,590,594,597,599,
-    832,873,
-  
+    301, # '^'i
+    353, # '(a+|b){0,1}?'i
+    357, # 'a*'i $&
+    523,524, # (?(1)a|b)
+    589,590,     # ([[:^alnum:]]+)
+    594,597,599, # ([[:^print:]]+)
+    832,     # ([a-\d]+)
+    873,     # ^(a\1?){4}$
+    836,837, # linux only: ([[:digit:]-z]+) ([[:digit:]-[:alpha:]]+)
+
+    # old PCRE fails:
     # Pathological patterns that run into PCRE_ERROR_MATCHLIMIT
     813 .. 830,
 

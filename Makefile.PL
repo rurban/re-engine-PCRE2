@@ -2,7 +2,17 @@ BEGIN { require 5.010; }
 use strict;
 use warnings;
 use ExtUtils::MakeMaker 6.31;
-#use Config;
+use Config;
+my $prefix;
+
+if (@ARGV) { # PREFIX=~
+  while (my $arg = shift @ARGV) {
+    if ($arg =~ /^-?-?PREFIX=(.*)/i) {
+      # lib and include prefix if installed locally (ie. travis)
+      $prefix = $1;
+    }
+  }
+}
 
 my %WriteMakefileArgs = (
   'NAME' => 're::engine::PCRE2',
@@ -25,8 +35,11 @@ my %WriteMakefileArgs = (
     SUFFIX	=> '.gz',
   },
   'EXE_FILES' => [],
-  #'LDDLFLAGS' => "$Config{lddlflags} /usr/local/lib/libpcre2-8.a",
-  'LIBS' => [ '-lpcre2-8' ],
+  ($prefix
+   ? ('CCFLAGS'   => "$Config{ccflags} -I$prefix/include",
+      'LDDLFLAGS' => "$Config{lddlflags} -I$prefix/lib")
+   : ()),
+  'LIBS' => ($prefix ? [ "-L$prefix/lib", '-lpcre2-8' ] : [ '-lpcre2-8' ]),
   'LICENSE' => 'perl',
   'test' => {
     'TESTS' => 't/*.t t/perl/*.t'
