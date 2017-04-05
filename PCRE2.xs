@@ -6,6 +6,7 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 #include "PCRE2.h"
+#define HAVE_JIT
 
 static char jittarget[64];
 
@@ -200,7 +201,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #if PERL_VERSION >= 14
     (void)pcre2_pattern_info(ri, PCRE2_INFO_NAMECOUNT, &namecount);
 
-    if ((namecount <= 0) || (options | PCRE2_NO_AUTO_CAPTURE)) {
+    if ((namecount <= 0) || (options & PCRE2_NO_AUTO_CAPTURE)) {
         re->paren_names = NULL;
     } else {
         PCRE2_make_nametable(re, ri, namecount);
@@ -296,7 +297,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     if (rc < 0) {
         pcre2_match_data_free(match_data);
 #ifdef HAVE_JIT
-        if (have_jit)
+        if (have_jit && match_context)
             pcre2_match_context_free(match_context);
 #endif
         if (rc != PCRE2_ERROR_NOMATCH) {
@@ -323,7 +324,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     /* XXX: nparens needs to be set to CAPTURECOUNT */
     pcre2_match_data_free(match_data);
 #ifdef HAVE_JIT
-    if (have_jit)
+    if (have_jit && match_context)
         pcre2_match_context_free(match_context);
 #endif
     return 1;

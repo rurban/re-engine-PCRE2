@@ -2,6 +2,7 @@ BEGIN { require 5.010; }
 use strict;
 use warnings;
 use ExtUtils::MakeMaker 6.31;
+#use Config;
 
 my %WriteMakefileArgs = (
   'NAME' => 're::engine::PCRE2',
@@ -23,9 +24,8 @@ my %WriteMakefileArgs = (
     SUFFIX	=> '.gz',
   },
   'EXE_FILES' => [],
-  'LIBS' => [
-    '-lpcre2-8'
-  ],
+  #'LDDLFLAGS' => "$Config{lddlflags} /usr/local/lib/libpcre2-8.a",
+  'LIBS' => [ '-lpcre2-8' ],
   'LICENSE' => 'perl',
   'test' => {
     'TESTS' => 't/*.t t/perl/*.t'
