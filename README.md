@@ -1,6 +1,6 @@
 # NAME 
 
-re::engine::PCRE2 - PCRE2 regular expression engine
+re::engine::PCRE2 - PCRE2 regular expression engine with jit
 
 # SYNOPSIS
 
@@ -13,11 +13,19 @@ re::engine::PCRE2 - PCRE2 regular expression engine
 # DESCRIPTION
 
 Replaces perl's regex engine in a given lexical scope with PCRE2
-regular expressions provided by libpcre.
+regular expressions provided by libpcre2-8.
 
 This provides jit support and faster matching, but may fail in
-cornercases. Note that most packaged libpcre2-8 libraries do not
-enable the jit compiler. `cmake -DPCRE2_SUPPORT_JIT=ON`
+cornercases. 
+
+Note that some packaged libpcre2-8 libraries do not enable the jit
+compiler. `cmake -DPCRE2_SUPPORT_JIT=ON`
+PCRE2 then silently falls back to the normal PCRE2 compiler and matcher.
+
+Check with:
+
+    perl -Mre::engine::PCRE2 -e'print re::engine::PCRE2::JIT'
+    perl -Mre::engine::PCRE2 -e'print re::engine::PCRE2::JITTARGET'
 
 # AUTHORS
 
