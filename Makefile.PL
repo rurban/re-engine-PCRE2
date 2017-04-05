@@ -17,6 +17,11 @@ my %WriteMakefileArgs = (
     'ExtUtils::MakeMaker' => '6.31'
   },
   'DISTNAME' => 're-engine-PCRE2',
+  dist	 => {
+    PREOP	=> 'pod2markdown $(VERSION_FROM) | tee README.md >$(DISTVNAME)/README.md; chmod -R u=rwX,go=rX . ;',
+    COMPRESS	=> 'gzip -9v',
+    SUFFIX	=> '.gz',
+  },
   'EXE_FILES' => [],
   'LIBS' => [
     '-lpcre'
@@ -47,6 +52,12 @@ delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
 WriteMakefile(%WriteMakefileArgs);
 
 package MY;
+
+sub top_targets {
+  local $_ = shift->SUPER::top_targets(@_);
+  s/\$\(FIRST_MAKEFILE\) blibdirs/\$(FIRST_MAKEFILE\) blibdirs README.md/;
+  $_
+}
 
 sub depend {
   "
