@@ -15,7 +15,7 @@ EXTERN_C char *   PCRE2_intuit(pTHX_ REGEXP * const, SV *,
 #else
 EXTERN_C I32      PCRE2_exec(pTHX_ REGEXP * const, char *, char *,
                               char *, SSize_t, SV *, void *, U32);
-EXTERN_C char *   PCRE2_intuit(pTHX_ REGEXP * const, SV *, const char const *,
+EXTERN_C char *   PCRE2_intuit(pTHX_ REGEXP * const, SV *, const char *,
                                char *, char *, U32, re_scream_pos_data *);
 #endif
 EXTERN_C SV *     PCRE2_checkstr(pTHX_ REGEXP * const);

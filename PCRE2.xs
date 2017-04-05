@@ -267,7 +267,7 @@ char *
 PCRE2_intuit(pTHX_ REGEXP * const rx, SV * sv,
              char *strpos, char *strend, const U32 flags, re_scream_pos_data *data)
 #else
-PCRE2_intuit(pTHX_ REGEXP * const rx, SV * sv, const char const *strbeg,
+PCRE2_intuit(pTHX_ REGEXP * const rx, SV * sv, const char *strbeg,
              char *strpos, char *strend, U32 flags, re_scream_pos_data *data)
 #endif
 {
@@ -346,7 +346,7 @@ PCRE2_make_nametable(regexp * const re, pcre * const ri, const int namecount)
 
     for (i = 0; i < namecount; i++)
     {
-        const char *key = tabptr + 2;
+        const char *key = (char*)tabptr + 2;
         int npar = (tabptr[0] << 8) | tabptr[1];
         SV *sv_dat = *hv_fetch(re->paren_names, key, strlen(key), TRUE);
 
