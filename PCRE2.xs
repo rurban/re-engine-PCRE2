@@ -228,13 +228,22 @@ REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
                        REGEXP *old_re,
                        bool *is_bare_re, U32 orig_rx_flags, U32 pm_flags)
 {
+    SV *pattern = NULL;
+
     PERL_UNUSED_ARG(pat_count);
-    PERL_UNUSED_ARG(expr);
     PERL_UNUSED_ARG(eng);
     PERL_UNUSED_ARG(old_re);
     PERL_UNUSED_ARG(is_bare_re);
     PERL_UNUSED_ARG(pm_flags);
-    return PCRE2_comp(aTHX_ patternp ? *patternp : cSVOPx_sv(expr), orig_rx_flags);
+
+    if (!patternp) {
+        for (; !expr || OP_CLASS(expr) != OA_SVOP; expr = expr->op_next) ;
+        if (expr && OP_CLASS(expr) == OA_SVOP)
+            pattern = cSVOPx_sv(expr);
+    } else {
+        pattern = *patternp;
+    }
+    return PCRE2_comp(aTHX_ pattern, orig_rx_flags);
 }
 #endif
 
