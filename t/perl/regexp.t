@@ -146,14 +146,13 @@ foreach (@tests) {
         next;
     }
     if (/\(\?\{/ || /\(\?\?\{/) {
-        print "ok $test # (PCRE doesn't support (?{}) or (??{}))\n";
-        if (/\S/) { print $_ };
-        next;
+        print "# (PCRE doesn't support (?{}) or (??{}))\n";
+        $pcre_fail{$test}++;
     }
-    if (exists $pcre_fail{$test}) {
-        print "ok $test # Known to fail under PCRE\n";
-        next;
-    }
+    #if (exists $pcre_fail{$test}) {
+    #    print "ok $test # Known to fail under PCRE\n";
+    #    next;
+    #}
     $skip_rest = 1 if /^__END__$/;
 
     if ($skip_rest) {
@@ -179,6 +178,7 @@ foreach (@tests) {
 		   'utf8::upgrade($subject); study $subject') {
 	# Need to make a copy, else the utf8::upgrade of an alreay studied
 	# scalar confuses things.
+        next if $study and ($pcre_fail{$test} or $skip);
 	my $subject = $subject;
 	my $c = $iters;
 	my ($code, $match, $got);
@@ -209,12 +209,12 @@ EOFCODE
 	    # Probably we should annotate specific tests with which warnings
 	    # categories they're known to trigger, and hence should be
 	    # disabled just for that test
-          no warnings qw(uninitialized regexp);
-          if ($INC{'re/engine/PCRE2.pm'}) {
-            eval "BEGIN { \$^H{regcomp} = re::engine::PCRE2->ENGINE; }; $code"
-          } else {
-            eval $code; # use perl's engine
-          }
+            no warnings qw(uninitialized regexp);
+            if ($INC{'re/engine/PCRE2.pm'}) {
+                eval "BEGIN { \$^H{regcomp} = re::engine::PCRE2->ENGINE; }; $code"
+            } else {
+                eval $code; # use perl's engine
+            }
 	}
 	chomp( my $err = $@ );
 	if ($result eq 'c' && $err) {
@@ -226,25 +226,26 @@ EOFCODE
 	    next TEST;
 	}
 	elsif ($@) {
-	    print "not ok $test $input => error `$err'\n$code\n$@\n"; next TEST;
+	    print "not ok $test ";
+            print "#TODO " if exists $pcre_fail{$test};
+            print "$input => error `$err'\n$code\n"; next TEST;
 	}
 	elsif ($result eq 'n') {
-	    if ($match) { print "not ok $test ($study) $input => false positive\n"; next TEST }
+	    if ($match) {
+              print "not ok $test ";
+              print "#TODO " if exists $pcre_fail{$test};
+              print "($study) $input => false positive\n";
+              next TEST
+            }
 	}
 	else {
 	    if (!$match || $got ne $expect) {
-
-#	        eval { require Data::Dumper };
-#		if ($@) {
-#		    print "not ok $test ($study) $input => `$got', match=$match\n$code\n";
-#		}
-#		else { # better diagnostics
-		    my $s = Data::Dumper->new([$subject],['subject'])->Useqq(1)->Dump;
-		    my $g = Data::Dumper->new([$got],['got'])->Useqq(1)->Dump;
-		    print "not ok $test ($study) $input => `$got', match=$match\n$s\n$g\n$code\n";
-#		}
-
-		next TEST;
+                my $s = Data::Dumper->new([$subject],['subject'])->Useqq(1)->Dump;
+                my $g = Data::Dumper->new([$got],['got'])->Useqq(1)->Dump;
+                print "not ok $test ";
+                print "#TODO " if exists $pcre_fail{$test};
+                print "($study) $input => `$got', match=$match\n$s\n$g\n$code\n";
+                next TEST;
 	    }
 	}
     }
