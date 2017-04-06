@@ -1,5 +1,9 @@
 #define SAVEPVN(p,n)	((p) ? savepvn(p,n) : NULL)
 
+#if PERL_VERSION < 12
+#define SVt_REGEXP SVt_PVMG
+#endif
+
 START_EXTERN_C
 EXTERN_C const regexp_engine pcre2_engine;
 #if PERL_VERSION < 12

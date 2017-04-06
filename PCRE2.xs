@@ -160,7 +160,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     pcre2_jit_compile(ri, PCRE2_JIT_COMPLETE); /* no partial matches */
 #endif
 
-#if PERL_VERSION > 10
+#if PERL_VERSION >= 12
     rx = (REGEXP*) newSV_type(SVt_REGEXP);
 #else
     Newxz(rx, 1, REGEXP);
