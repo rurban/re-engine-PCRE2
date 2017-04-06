@@ -64,7 +64,6 @@ PCRE2 then silently falls back to the normal PCRE2 compiler and matcher.
 Check with:
 
   perl -Mre::engine::PCRE2 -e'print re::engine::PCRE2::JIT'
-  perl -Mre::engine::PCRE2 -e'print re::engine::PCRE2::JITTARGET'
 
 =head1 METHODS
 
@@ -316,11 +315,6 @@ XS API C<<< (regexp*)re->engine >>> field.
 =item JIT
 
 Returns 1 or 0, if the JIT engine is available or not.
-
-=item JITTARGET
-
-Returns a string describing the JIT target description or nothing.
-On Intel this is typically "x86 64bit (little endian + unaligned)".
 
 =item config (OPTION)
 

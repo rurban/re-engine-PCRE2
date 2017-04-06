@@ -701,13 +701,6 @@ PPCODE:
     pcre2_config(PCRE2_CONFIG_JIT, &jit);
     mXPUSHi(jit ? 1 : 0);
 
-void
-JITTARGET(...)
-PROTOTYPE:
-PPCODE:
-    if (pcre2_config(PCRE2_CONFIG_JITTARGET, &retbuf) >= 0)
-        mXPUSHp(retbuf, strlen(retbuf));
-
 #define RET_STR(name) \
     if (strEQc(opt, #name)) { \
         if (pcre2_config(PCRE2_CONFIG_##name, &retbuf) >= 0) \
