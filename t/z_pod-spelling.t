@@ -55,3 +55,8 @@ nametable
 recursionlimit
 xffff
 xffffffff
+CRLF
+UTF
+lexically
+lookbehinds
+subpattern
