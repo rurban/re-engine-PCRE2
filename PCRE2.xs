@@ -260,7 +260,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
           char *strbeg, SSize_t minend, SV * sv,
           void *data, U32 flags)
-#endif  
+#endif
 {
     I32 rc;
     I32 i;
@@ -455,7 +455,225 @@ void
 ENGINE(...)
 PROTOTYPE:
 PPCODE:
-    XPUSHs(sv_2mortal(newSViv(PTR2IV(&pcre2_engine))));
+    mXPUSHs(newSViv(PTR2IV(&pcre2_engine)));
+
+# pattern options
+
+U32
+_alloptions(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_ALLOPTIONS, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+_argoptions(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_ARGOPTIONS, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+backrefmax(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_BACKREFMAX, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+bsr(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_BSR, &RETVAL);
+OUTPUT:
+    RETVAL
+
+# returns a 256-bit table
+void
+firstbitmap(REGEXP *rx)
+PROTOTYPE: $
+PPCODE:
+    U8* table;
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_FIRSTBITMAP, table);
+    if (table)
+        mXPUSHp(table, 256/8);
+
+U32
+firstcodetype(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_FIRSTCODETYPE, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+firstcodeunit(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_FIRSTCODEUNIT, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+hasbackslashc(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_HASBACKSLASHC, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+hascrorlf(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_HASCRORLF, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+jchanged(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_JCHANGED, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+jitsize(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_JITSIZE, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+lastcodetype(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_LASTCODETYPE, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+lastcodeunit(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_LASTCODEUNIT, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+matchempty(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_MATCHEMPTY, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+matchlimit(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    if (pcre2_pattern_info(re->pprivate, PCRE2_INFO_MATCHLIMIT, &RETVAL) < 0)
+        XSRETURN_EMPTY;
+OUTPUT:
+    RETVAL
+
+U32
+maxlookbehind(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_MAXLOOKBEHIND, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+minlength(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_MINLENGTH, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+namecount(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NAMECOUNT, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+nameentrysize(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NAMEENTRYSIZE, &RETVAL);
+OUTPUT:
+    RETVAL
+
+#if 0
+
+void
+nametable(REGEXP *rx)
+PROTOTYPE: $
+PPCODE:
+    U8* table;
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NAMETABLE, &RETVAL);
+    if (table)
+        mXPUSHp(table, strlen(table));
+
+#endif
+
+U32
+newline(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NEWLINE, &RETVAL);
+OUTPUT:
+    RETVAL
+
+U32
+recursionlimit(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    if (pcre2_pattern_info(re->pprivate, PCRE2_INFO_RECURSIONLIMIT, &RETVAL) < 0)
+        XSRETURN_EMPTY;
+OUTPUT:
+    RETVAL
+
+U32
+size(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_SIZE, &RETVAL);
+OUTPUT:
+    RETVAL
 
 void
 JIT(...)

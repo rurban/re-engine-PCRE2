@@ -27,3 +27,4 @@ t/z_pod-coverage.t
 t/z_pod-spell-mistakes.t
 t/z_pod-spelling.t
 t/z_pod.t
+typemap
