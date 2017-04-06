@@ -20,7 +20,7 @@ corner cases. See [pcre2compat](http://www.pcre.org/current/doc/html/pcre2compat
 It is typically 10% faster then the core regex engine.
 
 Note that some packaged libpcre2-8 libraries do not enable the jit
-compiler. `cmake -DPCRE2_SUPPORT_JIT=ON`
+compiler. `CFLAGS=-fPIC cmake -DPCRE2_SUPPORT_JIT=ON; make`
 PCRE2 then silently falls back to the normal PCRE2 compiler and matcher.
 
 Check with:
