@@ -495,6 +495,15 @@ CODE:
 OUTPUT:
     RETVAL
 
+U32
+capturecount(REGEXP *rx)
+PROTOTYPE: $
+CODE:
+    regexp * re = RegSV(rx);
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_CAPTURECOUNT, &RETVAL);
+OUTPUT:
+    RETVAL
+
 # returns a 256-bit table
 void
 firstbitmap(REGEXP *rx)

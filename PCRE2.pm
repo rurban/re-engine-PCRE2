@@ -16,6 +16,12 @@ BEGIN {
   XSLoader::load;
 }
 
+# set'able via import
+our @CONTEXT_OPTIONS = qw(
+  bsr max_pattern_length newline parens_nest_limit
+  match_limit offset_limit recursion_limit
+);
+
 # TODO: set context options, and save prev. ones for unimport.
 # compile-ctx and match-ctx
 sub import {
@@ -71,7 +77,7 @@ and L<INFORMATION ABOUT A COMPILED PATTERN|http://www.pcre.org/current/doc/html/
 
 =item match_limit (RX, [INT])
 
-NYI
+Get or set the match_limit match context. NYI
 
 =item offset_limit (RX, [INT])
 
@@ -85,13 +91,31 @@ NYI
 
 The result of pcre2_pattern_info(PCRE2_INFO_ALLOPTIONS) as unsigned integer.
 
+   my $q=qr/(a)/; print $q->_alloptions
+   => 64
+
+64 stands for PCRE2_DUPNAMES which is always set. See F<pcre2.h>
+
 =item _argoptions (RX)
 
 The result of pcre2_pattern_info(PCRE2_INFO_ARGOPTIONS) as unsigned integer.
 
+   my $q=qr/(a)/i; print $q->_argoptions
+   => 72
+
+72 = 64+8
+64 stands for PCRE2_DUPNAMES which is always set.
+8 for PCRE2_CASELESS.
+See F<pcre2.h>
+
 =item backrefmax (RX)
 
 Return the number of the highest back reference in the pattern.
+
+  my $q=qr/(a)\1/; print $q->backrefmax
+  => 1
+  my $q=qr/(a)(?(1)a|b)/; print $q->backrefmax
+  => 1
 
 =item bsr (RX)
 
@@ -104,6 +128,9 @@ What character sequences the C<\R> escape sequence matches.
 Return the highest capturing subpattern number in the pattern. In
 patterns where C<(?|> is not used, this is also the total number of
 capturing subpatterns.
+
+  my $q=qr/(a(b))/; print $q->capturecount
+  => 2
 
 =item firstbitmap (RX)
 
@@ -130,14 +157,15 @@ patterns, 0 is returned.
 
 Return the value of the first code unit of any matched string in the
 situation where L</firstcodetype (RX)> returns 1; otherwise return
-0. In the 8-bit library, the value is always less than 256. In the
-16-bit library the value can be up to 0xffff. In the 32-bit library in
-UTF-32 mode the value can be up to 0x10ffff, and up to 0xffffffff when
-not using UTF-32 mode.
+0. The value is always less than 256.
+
+  my $q=qr/(cat|cow|coyote)/; print $q->firstcodetype, $q->firstcodeunit
+  => 1 99
 
 =item hasbackslashc (RX)
 
 Return 1 if the pattern contains any instances of \C, otherwise 0.
+Note that \C is forbidden since perl 5.26 (?).
 
 =item hascrorlf (RX)
 
@@ -168,14 +196,14 @@ length. For example, for the pattern C</^a\d+z\d+/> the returned value is
 1 (with "z" returned from lastcodeunit), but for C</^a\dz\d/>
 the returned value is 0.
 
-=item lastcodeunit
+=item lastcodeunit (RX)
 
 Return the value of the rightmost literal data unit that must exist in
 any matched string, other than at its start, if such a value has been
 recorded. The third argument should point to an uint32_t variable. If
 there is no such value, 0 is returned.
 
-=item matchempty
+=item matchempty (RX)
 
 Return 1 if the pattern might match an empty string, otherwise 0. The
 third argument should point to an uint32_t variable. When a pattern
@@ -183,12 +211,12 @@ contains recursive subroutine calls it is not always possible to
 determine whether or not it can match an empty string. PCRE2 takes a
 cautious approach and returns 1 in such cases.
 
-=item matchlimit
+=item matchlimit (RX)
 
 If the pattern set a match limit by including an item of the form
 (*LIMIT_MATCH=nnnn) at the start, the value is returned.
 
-=item maxlookbehind
+=item maxlookbehind (RX)
 
 Return the number of characters (not code units) in the longest
 lookbehind assertion in the pattern. The third argument should point
@@ -201,7 +229,7 @@ that at least one character from the old segment is retained when a
 new segment is processed. Otherwise, if there are no lookbehinds in
 the pattern, \A might match incorrectly at the start of a new segment.
 
-=item minlength
+=item minlength (RX)
 
 If a minimum length for matching subject strings was computed, its
 value is returned. Otherwise the returned value is 0. The value is a
@@ -266,10 +294,14 @@ import lexically sets the PCRE2 engine to be active.
 import will later accept compile context options.
 See L<PCRE2 NATIVE API COMPILE CONTEXT FUNCTIONS|http://www.pcre.org/current/doc/html/pcre2api.html#SEC4>.
 
-  bsr => int
-  max_pattern_length => int
-  newline => int
-  parens_nest_limit => int
+  bsr => INT
+  max_pattern_length => INT
+  newline => INT
+  parens_nest_limit => INT
+
+  match_limit => INT
+  offset_limit => INT
+  recursion_limit => INT
 
 =item unimport
 

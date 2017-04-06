@@ -37,7 +37,7 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
 
 - match\_limit (RX, \[INT\])
 
-    NYI
+    Get or set the match\_limit match context. NYI
 
 - offset\_limit (RX, \[INT\])
 
@@ -51,13 +51,31 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
 
     The result of pcre2\_pattern\_info(PCRE2\_INFO\_ALLOPTIONS) as unsigned integer.
 
+        my $q=qr/(a)/; print $q->_alloptions
+        => 64
+
+    64 stands for PCRE2\_DUPNAMES which is always set. See `pcre2.h`
+
 - \_argoptions (RX)
 
     The result of pcre2\_pattern\_info(PCRE2\_INFO\_ARGOPTIONS) as unsigned integer.
 
+        my $q=qr/(a)/i; print $q->_argoptions
+        => 72
+
+    72 = 64+8
+    64 stands for PCRE2\_DUPNAMES which is always set.
+    8 for PCRE2\_CASELESS.
+    See `pcre2.h`
+
 - backrefmax (RX)
 
     Return the number of the highest back reference in the pattern.
+
+        my $q=qr/(a)\1/; print $q->backrefmax
+        => 1
+        my $q=qr/(a)(?(1)a|b)/; print $q->backrefmax
+        => 1
 
 - bsr (RX)
 
@@ -70,6 +88,9 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
     Return the highest capturing subpattern number in the pattern. In
     patterns where `(?|` is not used, this is also the total number of
     capturing subpatterns.
+
+        my $q=qr/(a(b))/; print $q->capturecount
+        => 2
 
 - firstbitmap (RX)
 
@@ -96,14 +117,15 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
 
     Return the value of the first code unit of any matched string in the
     situation where ["firstcodetype (RX)"](#firstcodetype-rx) returns 1; otherwise return
-    0\. In the 8-bit library, the value is always less than 256. In the
-    16-bit library the value can be up to 0xffff. In the 32-bit library in
-    UTF-32 mode the value can be up to 0x10ffff, and up to 0xffffffff when
-    not using UTF-32 mode.
+    0\. The value is always less than 256.
+
+        my $q=qr/(cat|cow|coyote)/; print $q->firstcodetype, $q->firstcodeunit
+        => 1 99
 
 - hasbackslashc (RX)
 
     Return 1 if the pattern contains any instances of \\C, otherwise 0.
+    Note that \\C is forbidden since perl 5.26 (?).
 
 - hascrorlf (RX)
 
@@ -134,14 +156,14 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
     1 (with "z" returned from lastcodeunit), but for `/^a\dz\d/`
     the returned value is 0.
 
-- lastcodeunit
+- lastcodeunit (RX)
 
     Return the value of the rightmost literal data unit that must exist in
     any matched string, other than at its start, if such a value has been
     recorded. The third argument should point to an uint32\_t variable. If
     there is no such value, 0 is returned.
 
-- matchempty
+- matchempty (RX)
 
     Return 1 if the pattern might match an empty string, otherwise 0. The
     third argument should point to an uint32\_t variable. When a pattern
@@ -149,12 +171,12 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
     determine whether or not it can match an empty string. PCRE2 takes a
     cautious approach and returns 1 in such cases.
 
-- matchlimit
+- matchlimit (RX)
 
     If the pattern set a match limit by including an item of the form
     (\*LIMIT\_MATCH=nnnn) at the start, the value is returned.
 
-- maxlookbehind
+- maxlookbehind (RX)
 
     Return the number of characters (not code units) in the longest
     lookbehind assertion in the pattern. The third argument should point
@@ -167,7 +189,7 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
     new segment is processed. Otherwise, if there are no lookbehinds in
     the pattern, \\A might match incorrectly at the start of a new segment.
 
-- minlength
+- minlength (RX)
 
     If a minimum length for matching subject strings was computed, its
     value is returned. Otherwise the returned value is 0. The value is a
@@ -227,10 +249,14 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
     import will later accept compile context options.
     See [PCRE2 NATIVE API COMPILE CONTEXT FUNCTIONS](http://www.pcre.org/current/doc/html/pcre2api.html#SEC4).
 
-        bsr => int
-        max_pattern_length => int
-        newline => int
-        parens_nest_limit => int
+        bsr => INT
+        max_pattern_length => INT
+        newline => INT
+        parens_nest_limit => INT
+
+        match_limit => INT
+        offset_limit => INT
+        recursion_limit => INT
 
 - unimport
 
