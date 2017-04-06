@@ -8,7 +8,11 @@
 #include "PCRE2.h"
 #define HAVE_JIT
 
-static char jittarget[64];
+#ifndef strEQc
+# define strEQc(s, c) strEQ(s, ("" c ""))
+#endif
+
+static char retbuf[64];
 
 #if PERL_VERSION > 10
 #define RegSV(p) SvANY(p)
@@ -459,11 +463,41 @@ PROTOTYPE:
 PPCODE:
     uint32_t jit;
     pcre2_config(PCRE2_CONFIG_JIT, &jit);
-    XPUSHs(sv_2mortal(newSViv(jit ? 1 : 0)));
+    mXPUSHi(jit ? 1 : 0);
 
 void
 JITTARGET(...)
 PROTOTYPE:
 PPCODE:
-    if (pcre2_config(PCRE2_CONFIG_JITTARGET, &jittarget) >= 0)
-        XPUSHs(sv_2mortal(newSVpvn(jittarget, strlen(jittarget))));
+    if (pcre2_config(PCRE2_CONFIG_JITTARGET, &retbuf) >= 0)
+        mXPUSHp(retbuf, strlen(retbuf));
+
+#define RET_STR(name) \
+    if (strEQc(opt, #name)) { \
+        if (pcre2_config(PCRE2_CONFIG_##name, &retbuf) >= 0) \
+            mXPUSHp(retbuf, strlen(retbuf)); \
+    }
+#define RET_INT(name) \
+    if (strEQc(opt, #name)) { \
+        if (pcre2_config(PCRE2_CONFIG_##name, &retint) >= 0) \
+            mXPUSHi(retint); \
+    }
+
+void
+config(char* opt)
+PROTOTYPE: $
+PPCODE:
+    int retint;
+    RET_STR(JITTARGET) else
+    RET_STR(UNICODE_VERSION) else
+    RET_STR(VERSION) else
+    RET_INT(BSR) else
+    RET_INT(JIT) else
+    RET_INT(LINKSIZE) else
+    RET_INT(MATCHLIMIT) else
+    RET_INT(NEWLINE) else
+    RET_INT(PARENSLIMIT) else
+    RET_INT(DEPTHLIMIT) else
+    RET_INT(RECURSIONLIMIT) else
+    RET_INT(STACKRECURSE) else
+    RET_INT(UNICODE)

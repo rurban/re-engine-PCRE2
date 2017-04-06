@@ -21,4 +21,9 @@ t/split-null.t
 t/split.t
 t/subexp.t
 t/unimport.t
-t/z_release-pod-syntax.t
+t/z_kwalitee.t
+t/z_manifest.t
+t/z_pod-coverage.t
+t/z_pod-spell-mistakes.t
+t/z_pod-spelling.t
+t/z_pod.t
