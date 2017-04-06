@@ -39,19 +39,19 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 
     /* pcre2_compile */
     int errcode;
-    size_t erroffset;
+    PCRE2_SIZE erroffset;
 
     /* pcre2_pattern_info */
-    unsigned long length;
-    int nparens;
+    PCRE2_SIZE length;
+    U32 nparens;
 
     /* pcre_compile */
-    int options = PCRE2_DUPNAMES;
+    U32 options = PCRE2_DUPNAMES;
     /*int have_jit;*/
 
 #if PERL_VERSION >= 14
     /* named captures */
-    int namecount;
+    I32 namecount;
 #endif
 
     sv_2mortal(wrapped);
@@ -140,7 +140,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         options |= (PCRE2_UTF|PCRE2_NO_UTF_CHECK);
 
     ri = pcre2_compile(
-        exp, plen,    /* pattern */
+        (PCRE2_SPTR8)exp, plen,    /* pattern */
         options,      /* options */
         &errcode,     /* errors */
         &erroffset,   /* error offset */
@@ -150,7 +150,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     if (ri == NULL) {
         PCRE2_UCHAR buf[256];
         pcre2_get_error_message(errcode, buf, sizeof(buf));
-        croak("PCRE2 compilation failed at offset %d: %s\n", erroffset, buf);
+        croak("PCRE2 compilation failed at offset %u: %s\n", (unsigned)erroffset, buf);
         sv_2mortal(wrapped);
         return NULL;
     }
@@ -287,7 +287,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         /*pcre2_jit_stack_assign(match_context, NULL, get_jit_stack());*/
         rc = (I32)pcre2_jit_match(
             ri,
-            stringarg,
+            (PCRE2_SPTR8)stringarg,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
             re->intflags,         /* the options (again) */
@@ -298,7 +298,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 #endif
         rc = (I32)pcre2_match(
             ri,
-            stringarg,
+            (PCRE2_SPTR8)stringarg,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
             0,                    /* the options (again?) re->intflags */
@@ -399,12 +399,11 @@ PCRE2_package(pTHX_ REGEXP * const rx)
 
 #if PERL_VERSION >= 14
 void
-PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const int namecount)
+PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecount)
 {
     unsigned char *name_table, *tabptr;
-    int name_entry_size;
+    U32 name_entry_size;
     int i;
-    IV j;
 
     /* The name table */
     (void)pcre2_pattern_info(ri, PCRE2_INFO_NAMETABLE, &name_table);
@@ -415,8 +414,7 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const int namecou
     re->paren_names = newHV();
     tabptr = name_table;
 
-    for (i = 0; i < namecount; i++)
-    {
+    for (i = 0; i < namecount; i++) {
         const char *key = (char*)tabptr + 2;
         int npar = (tabptr[0] << 8) | tabptr[1];
         SV *sv_dat = *hv_fetch(re->paren_names, key, strlen(key), TRUE);
@@ -426,13 +424,12 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const int namecou
 
         if (!SvPOK(sv_dat)) {
             /* The first (and maybe only) entry with this name */
-            (void)SvUPGRADE(sv_dat,SVt_PVNV);
+            (void)SvUPGRADE(sv_dat, SVt_PVNV);
             sv_setpvn(sv_dat, (char *)&(npar), sizeof(I32));
             SvIOK_on(sv_dat);
-            SvIVX(sv_dat)= 1;
+            SvIVX(sv_dat) = 1;
         } else {
             /* An entry under this name has appeared before, append */
-
             IV count = SvIV(sv_dat);
             I32 *pv = (I32*)SvPVX(sv_dat);
             IV j;
@@ -518,7 +515,7 @@ void
 firstbitmap(REGEXP *rx)
 PROTOTYPE: $
 PPCODE:
-    U8* table;
+    char* table;
     regexp * re = RegSV(rx);
     pcre2_pattern_info(re->pprivate, PCRE2_INFO_FIRSTBITMAP, table);
     if (table)

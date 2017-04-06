@@ -37,7 +37,7 @@ EXTERN_C REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
 #endif
 END_EXTERN_C
 
-void PCRE2_make_nametable(regexp * const, pcre2_code * const, const int);
+void PCRE2_make_nametable(regexp * const, pcre2_code * const, const I32);
 
 const regexp_engine pcre2_engine = {
     PCRE2_comp,
