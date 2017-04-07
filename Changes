@@ -1,7 +1,8 @@
 Revision history for re::engine::PCRE2
 
-0.03  rurban
+0.03 Fri Apr 7 19:38:46 2017 +0200 rurban
 
+    - Minor pod fixes
     - Add Devel::CheckLib (optional)
 
 0.02 Fri Apr 7 11:22:51 2017 +0200 rurban
