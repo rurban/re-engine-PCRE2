@@ -46,7 +46,6 @@ my %WriteMakefileArgs = (
     'Devel::CheckLib'     => '1.00',
     'ExtUtils::MakeMaker' => '6.31'
   },
-  'DISTNAME' => 're-engine-PCRE2',
   'dist' => {
     PREOP	=> 'pod2markdown $(VERSION_FROM) | tee README.md >$(DISTVNAME)/README.md;'
                   .' chmod -R u=rwX,go=rX . ;',
