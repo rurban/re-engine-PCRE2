@@ -149,10 +149,11 @@ foreach (@tests) {
         print "# (PCRE doesn't support (?{}) or (??{}))\n";
         $pcre_fail{$test}++;
     }
-    #if (exists $pcre_fail{$test}) {
-    #    print "ok $test # Known to fail under PCRE\n";
-    #    next;
-    #}
+    if ($test > 1292 && $] < 5.020) {
+        print "ok $test # Test too new for $]\n";
+        $skip_rest = 1;
+        next;
+    }
     $skip_rest = 1 if /^__END__$/;
 
     if ($skip_rest) {
