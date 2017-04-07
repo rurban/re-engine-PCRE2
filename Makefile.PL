@@ -1,10 +1,10 @@
-BEGIN { require 5.010; }
+use 5.010;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker 6.31;
 use Config;
-my $prefix;
 
+my $prefix;
 if (@ARGV) { # PREFIX=~
   while (my $arg = shift @ARGV) {
     if ($arg =~ /^-?-?PREFIX=(.*)/i) {
@@ -13,6 +13,15 @@ if (@ARGV) { # PREFIX=~
     }
   }
 }
+
+eval 'use Devel::CheckLib;' and
+  check_lib_or_exit(
+    lib => 'pcre2-8',
+    header => 'pcre2.h',
+    $prefix ? (
+      incpath => "$prefix/include",
+      libpath => "$prefix/lib"
+    ) : ());
 
 my %WriteMakefileArgs = (
   'NAME'         => 're::engine::PCRE2',
@@ -34,6 +43,7 @@ my %WriteMakefileArgs = (
      : ()),
   },
   'CONFIGURE_REQUIRES' => {
+    'Devel::CheckLib'     => '1.00',
     'ExtUtils::MakeMaker' => '6.31'
   },
   'DISTNAME' => 're-engine-PCRE2',
