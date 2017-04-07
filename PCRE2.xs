@@ -120,7 +120,11 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
           sv_catpvn(wrapped, "aa", 2);
           break;
         default:
+#if PERL_VERSION > 10
           Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
+#else
+          Perl_warner(aTHX_ packWARN(WARN_REGEXP),
+#endif
                          "local charset option ignored by pcre2");
           return Perl_re_compile(pattern, flags);
         }
@@ -149,7 +153,11 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     if (ri == NULL) {
         PCRE2_UCHAR buf[256];
         pcre2_get_error_message(errcode, buf, sizeof(buf));
+#if PERL_VERSION > 10
         Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
+#else
+        Perl_warner(aTHX_ packWARN(WARN_REGEXP),
+#endif
             "PCRE2 compilation failed at offset %u: %s\n",
             (unsigned)erroffset, buf);
         return Perl_re_compile(pattern, flags);
