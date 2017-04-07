@@ -59,6 +59,13 @@ my %WriteMakefileArgs = (
    : ()),
   'LIBS'    => ($prefix ? [ "-L$prefix/lib", '-lpcre2-8' ] : [ '-lpcre2-8' ]),
   'LICENSE' => 'perl',
+  'META_MERGE' => {
+    resources => {
+        license     => 'http://dev.perl.org/licenses/',
+        bugtracker  => 'https://github.com/rurban/re-engine-PCRE2/issues',
+        repository  => 'https://github.com/rurban/re-engine-PCRE2/',
+    },
+  },
   'test'    => {
     'TESTS' => 't/*.t t/perl/*.t'
   },
@@ -81,6 +88,8 @@ unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
 
 delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
   unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
+delete $WriteMakefileArgs{META_MERGE}
+  unless eval { ExtUtils::MakeMaker->VERSION(6.46) };
 
 WriteMakefile(%WriteMakefileArgs);
 
