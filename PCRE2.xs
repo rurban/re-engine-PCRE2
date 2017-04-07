@@ -48,7 +48,6 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 
     /* pcre_compile */
     U32 options = PCRE2_DUPNAMES;
-    /*int have_jit;*/
 
 #if PERL_VERSION >= 14
     /* named captures */
@@ -88,8 +87,9 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #ifdef RXf_PMf_EXTENDED_MORE
     if (flags & RXf_PMf_EXTENDED_MORE) {
         Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "/xx ignored by pcre2");
-        options |= PCRE2_EXTENDED;
-        sv_catpvn(wrapped, "x", 1);
+        return Perl_re_compile(pattern, flags);
+        /*options |= PCRE2_EXTENDED;
+          sv_catpvn(wrapped, "x", 1);*/
     }
 #endif
     if (flags & RXf_PMf_MULTILINE) {
@@ -122,6 +122,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         default:
           Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
                          "local charset option ignored by pcre2");
+          return Perl_re_compile(pattern, flags);
         }
       }
     }
@@ -148,8 +149,10 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     if (ri == NULL) {
         PCRE2_UCHAR buf[256];
         pcre2_get_error_message(errcode, buf, sizeof(buf));
-        croak("PCRE2 compilation failed at offset %u: %s\n", (unsigned)erroffset, buf);
-        return NULL;
+        Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
+            "PCRE2 compilation failed at offset %u: %s\n",
+            (unsigned)erroffset, buf);
+        return Perl_re_compile(pattern, flags);
     }
 #ifdef HAVE_JIT
     /* pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
@@ -211,7 +214,6 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 
     /* Check how many parens we need */
     (void)pcre2_pattern_info(ri, PCRE2_INFO_CAPTURECOUNT, &nparens);
-
     re->nparens = re->lastparen = re->lastcloseparen = nparens;
     Newxz(re->offs, nparens + 1, regexp_paren_pair);
 
