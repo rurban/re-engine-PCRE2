@@ -199,16 +199,14 @@ the returned value is 0.
 
 Return the value of the rightmost literal data unit that must exist in
 any matched string, other than at its start, if such a value has been
-recorded. The third argument should point to an uint32_t variable. If
-there is no such value, 0 is returned.
+recorded. If there is no such value, 0 is returned.
 
 =item matchempty (RX)
 
-Return 1 if the pattern might match an empty string, otherwise 0. The
-third argument should point to an uint32_t variable. When a pattern
-contains recursive subroutine calls it is not always possible to
-determine whether or not it can match an empty string. PCRE2 takes a
-cautious approach and returns 1 in such cases.
+Return 1 if the pattern might match an empty string, otherwise 0. When
+a pattern contains recursive subroutine calls it is not always
+possible to determine whether or not it can match an empty
+string. PCRE2 takes a cautious approach and returns 1 in such cases.
 
 =item matchlimit (RX)
 
@@ -218,25 +216,25 @@ If the pattern set a match limit by including an item of the form
 =item maxlookbehind (RX)
 
 Return the number of characters (not code units) in the longest
-lookbehind assertion in the pattern. The third argument should point
-to an unsigned 32-bit integer. This information is useful when doing
-multi-segment matching using the partial matching facilities. Note
-that the simple assertions \b and \B require a one-character
-lookbehind. \A also registers a one-character lookbehind, though it
-does not actually inspect the previous character. This is to ensure
-that at least one character from the old segment is retained when a
-new segment is processed. Otherwise, if there are no lookbehinds in
-the pattern, \A might match incorrectly at the start of a new segment.
+lookbehind assertion in the pattern. This information is useful when
+doing multi-segment matching using the partial matching
+facilities. Note that the simple assertions \b and \B require a
+one-character lookbehind. \A also registers a one-character
+lookbehind, though it does not actually inspect the previous
+character. This is to ensure that at least one character from the old
+segment is retained when a new segment is processed. Otherwise, if
+there are no lookbehinds in the pattern, \A might match incorrectly at
+the start of a new segment.
 
 =item minlength (RX)
 
 If a minimum length for matching subject strings was computed, its
 value is returned. Otherwise the returned value is 0. The value is a
 number of characters, which in UTF mode may be different from the
-number of code units. The third argument should point to an uint32_t
-variable. The value is a lower bound to the length of any matching
-string. There may not be any strings of that length that do actually
-match, but every string that does match is at least that long.
+number of code units. The value is a lower bound to the length of any
+matching string. There may not be any strings of that length that do
+actually match, but every string that does match is at least that
+long.
 
 =item namecount (RX)
 
@@ -271,14 +269,13 @@ If the pattern set a recursion limit by including an item of the form
 =item size (RX)
 
 Return the size of the compiled pattern in bytes (for all three
-libraries). The third argument should point to a size_t variable. This
-value includes the size of the general data block that precedes the
-code units of the compiled pattern itself. The value that is used when
-C<pcre2_compile()> is getting memory in which to place the compiled
-pattern may be slightly larger than the value returned by this option,
-because there are cases where the code that calculates the size has to
-over-estimate. Processing a pattern with the JIT compiler does not
-alter the value returned by this option.
+libraries).  This value includes the size of the general data block
+that precedes the code units of the compiled pattern itself. The value
+that is used when C<pcre2_compile()> is getting memory in which to
+place the compiled pattern may be slightly larger than the value
+returned by this option, because there are cases where the code that
+calculates the size has to over-estimate. Processing a pattern with
+the JIT compiler does not alter the value returned by this option.
 
 =back
 
