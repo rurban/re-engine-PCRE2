@@ -1,5 +1,9 @@
 Revision history for re::engine::PCRE2
 
+0.04 Fri Apr 7 19:57:46 2017 +0200 rurban
+
+    - add META_MERGE resources, esp. for the bugtracker
+
 0.03 Fri Apr 7 19:38:46 2017 +0200 rurban
 
     - Minor pod fixes
