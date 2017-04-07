@@ -35,7 +35,8 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     char  *exp = SvPV((SV*)pattern, plen);
     char *xend = exp + plen;
     U32 extflags = flags;
-    SV * wrapped = newSVpvn("(?", 2), * wrapped_unset = newSVpvn("", 0);
+    SV * wrapped = newSVpvn_flags("(?", 2, SVs_TEMP);
+    SV * wrapped_unset = newSVpvn_flags("", 0, SVs_TEMP);
 
     /* pcre2_compile */
     int errcode;
@@ -53,9 +54,6 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     /* named captures */
     I32 namecount;
 #endif
-
-    sv_2mortal(wrapped);
-    sv_2mortal(wrapped_unset);
 
     /* C<split " ">, bypass the PCRE2 engine alltogether and act as perl does */
     if (flags & RXf_SPLIT && plen == 1 && exp[0] == ' ')
@@ -151,7 +149,6 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         PCRE2_UCHAR buf[256];
         pcre2_get_error_message(errcode, buf, sizeof(buf));
         croak("PCRE2 compilation failed at offset %u: %s\n", (unsigned)erroffset, buf);
-        sv_2mortal(wrapped);
         return NULL;
     }
 #ifdef HAVE_JIT
