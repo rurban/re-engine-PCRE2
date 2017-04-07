@@ -15,14 +15,23 @@ if (@ARGV) { # PREFIX=~
 }
 
 my %WriteMakefileArgs = (
-  'NAME' => 're::engine::PCRE2',
+  'NAME'         => 're::engine::PCRE2',
   'VERSION_FROM' => 'PCRE2.pm',
-  'ABSTRACT' => 'PCRE2 regular expression engine with jit',
-  'AUTHOR' => 'Reini Urban <rurban@cpan.org>',
+  'ABSTRACT'     => 'PCRE2 regular expression engine with jit',
+  'AUTHOR'       => 'Reini Urban <rurban@cpan.org>',
   'BUILD_REQUIRES' => {
     'Data::Dumper' => '0',
-    'Test::More' => '0',
-    'vars' => '0'
+    'Test::More'   => '0.88',
+    ($ENV{RELEASE_TESTING}
+     ? ('Test::Kwalitee'    => 0,
+        'Class::XSAccessor' => 0,
+        'Text::CSV_XS'      => 0,
+        'List::MoreUtils'   => 0,
+        'Pod::Spell::CommonMistakes' => 0,
+        'Test::Pod'           => '1.00',
+        'Test::Pod::Coverage' => '1.04',
+        'Test::Spelling'      => 0)
+     : ()),
   },
   'CONFIGURE_REQUIRES' => {
     'ExtUtils::MakeMaker' => '6.31'
@@ -39,12 +48,12 @@ my %WriteMakefileArgs = (
    ? ('CCFLAGS'   => "$Config{ccflags} -I$prefix/include",
       'LDDLFLAGS' => "$Config{lddlflags} -I$prefix/lib")
    : ()),
-  'LIBS' => ($prefix ? [ "-L$prefix/lib", '-lpcre2-8' ] : [ '-lpcre2-8' ]),
+  'LIBS'    => ($prefix ? [ "-L$prefix/lib", '-lpcre2-8' ] : [ '-lpcre2-8' ]),
   'LICENSE' => 'perl',
-  'test' => {
+  'test'    => {
     'TESTS' => 't/*.t t/perl/*.t'
   },
-  'SIGN' => 1,
+  'SIGN'    => 1,
 );
 
 

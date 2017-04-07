@@ -2,8 +2,13 @@ Revision history for re::engine::PCRE2
 
 0.02  rurban
 
+    - Add many more config functions and pattern methods.
     - Enable the full perl regexp testsuite.
-    Only /g regexp's are failing.
+      Only anchored /g regexp's are still failing.
+    - Implemented op_comp, with a fallback to core re_engine
+      with codeblocks.
+    - Add pcre warning when falling back to core re_engine on
+      unsupported patterns.
 
 0.01 Wed Apr 5 11:40:18 2017 +0200 rurban
 
