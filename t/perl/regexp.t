@@ -134,8 +134,9 @@ my @pcre_fail = (
 push @pcre_fail, (1026..1029, 1032..1035, 1041..1044, 1047, 1049,
                   1053..1054, 1208, 1210..1216, 1245, 1247,
                   1252, 1257) if $] < 5.014;
-# {n,m} with n>m
-push @pcre_fail, (606) if $] < 5.021 or "$^V" !~ /c$/;
+# PCRE2 compilation failed at offset 7: numbers out of order in {} quantifier
+# Quantifier {n,m} with n > m can't match in regex
+push @pcre_fail, (606); # if $] < 5.021 or "$^V" !~ /c$/;
 @pcre_fail{@pcre_fail} = ();
 
 TEST:

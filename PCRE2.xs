@@ -6,6 +6,7 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 #include "PCRE2.h"
+#include "regcomp.h"
 #define HAVE_JIT
 
 #ifndef strEQc
@@ -230,23 +231,28 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 }
 
 #if PERL_VERSION >= 18
+/* code blocks are extracted like this:
+  /a(?{$a=2;$b=3;($b)=$a})b/ =>
+  expr: list - const 'a' + getvars + const '(?{$a=2;$b=3;($b)=$a})' + const 'b'
+ */
 REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
                        OP *expr, const struct regexp_engine* eng,
                        REGEXP *old_re,
                        bool *is_bare_re, U32 orig_rx_flags, U32 pm_flags)
 {
     SV *pattern = NULL;
-
-    PERL_UNUSED_ARG(pat_count);
-    PERL_UNUSED_ARG(eng);
-    PERL_UNUSED_ARG(old_re);
-    PERL_UNUSED_ARG(is_bare_re);
-    PERL_UNUSED_ARG(pm_flags);
-
     if (!patternp) {
-        for (; !expr || OP_CLASS(expr) != OA_SVOP; expr = expr->op_next) ;
-        if (expr && OP_CLASS(expr) == OA_SVOP)
-            pattern = cSVOPx_sv(expr);
+        OP *o = expr;
+        for (; !o || OP_CLASS(o) != OA_SVOP; o = o->op_next) ;
+        if (o && OP_CLASS(o) == OA_SVOP)
+            /* having a single const op only? */
+            if (o->op_next == o || o->op_next->op_type == OP_LIST)
+                pattern = cSVOPx_sv(o);
+            else /* no, fallback to core with codeblocks */
+                return Perl_re_op_compile
+                    (patternp, pat_count, expr,
+                     &PL_core_reg_engine,
+                     old_re, is_bare_re, orig_rx_flags, pm_flags);
     } else {
         pattern = *patternp;
     }
