@@ -88,7 +88,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #ifdef RXf_PMf_EXTENDED_MORE
     if (flags & RXf_PMf_EXTENDED_MORE) {
         Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "/xx ignored by pcre2");
-        return Perl_re_compile(pattern, flags);
+        return Perl_re_compile(aTHX_ pattern, flags);
         /*options |= PCRE2_EXTENDED;
           sv_catpvn(wrapped, "x", 1);*/
     }
@@ -127,7 +127,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
           Perl_warner(aTHX_ packWARN(WARN_REGEXP),
 #endif
                          "local charset option ignored by pcre2");
-          return Perl_re_compile(pattern, flags);
+          return Perl_re_compile(aTHX_ pattern, flags);
         }
       }
     }
@@ -161,7 +161,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
             "PCRE2 compilation failed at offset %u: %s\n",
             (unsigned)erroffset, buf);
-        return Perl_re_compile(pattern, flags);
+        return Perl_re_compile(aTHX_ pattern, flags);
     }
 #ifdef HAVE_JIT
     /* pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
@@ -244,15 +244,17 @@ REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
     if (!patternp) {
         OP *o = expr;
         for (; !o || OP_CLASS(o) != OA_SVOP; o = o->op_next) ;
-        if (o && OP_CLASS(o) == OA_SVOP)
+        if (o && OP_CLASS(o) == OA_SVOP) {
             /* having a single const op only? */
             if (o->op_next == o || o->op_next->op_type == OP_LIST)
                 pattern = cSVOPx_sv(o);
-            else /* no, fallback to core with codeblocks */
+            else { /* no, fallback to core with codeblocks */
                 return Perl_re_op_compile
-                    (patternp, pat_count, expr,
+                    (aTHX_ patternp, pat_count, expr,
                      &PL_core_reg_engine,
                      old_re, is_bare_re, orig_rx_flags, pm_flags);
+            }
+        }
     } else {
         pattern = *patternp;
     }
