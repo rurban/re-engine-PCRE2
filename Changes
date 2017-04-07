@@ -1,6 +1,10 @@
 Revision history for re::engine::PCRE2
 
-0.02  rurban
+0.03  rurban
+
+    - Add Devel::CheckLib (optional)
+
+0.02 Fri Apr 7 11:22:51 2017 +0200 rurban
 
     - Add many more config functions and pattern methods.
     - Enable the full perl regexp testsuite.
