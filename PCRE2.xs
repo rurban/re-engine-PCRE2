@@ -132,11 +132,14 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     }
 #ifdef RXf_PMf_EXTENDED_MORE
     if (flags & RXf_PMf_EXTENDED_MORE) {
+# ifdef PCRE2_EXTENDED_MORE
         /* allow space and tab in [ ] classes */
+        options |= PCRE2_EXTENDED_MORE;
+        sv_catpvn(wrapped, "x", 1);
+# else
         Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "/xx ignored by pcre2");
         return Perl_re_compile(aTHX_ pattern, flags);
-        /*options |= PCRE2_EXTENDED;
-          sv_catpvn(wrapped, "x", 1);*/
+# endif        
     }
 #endif
     if (flags & RXf_PMf_MULTILINE) {
