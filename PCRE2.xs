@@ -87,6 +87,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     }
 #ifdef RXf_PMf_EXTENDED_MORE
     if (flags & RXf_PMf_EXTENDED_MORE) {
+        /* allow space and tab in [ ] classes */
         Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP), "/xx ignored by pcre2");
         return Perl_re_compile(aTHX_ pattern, flags);
         /*options |= PCRE2_EXTENDED;
@@ -99,7 +100,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     }
 #ifdef RXf_PMf_NOCAPTURE
     if (flags & RXf_PMf_NOCAPTURE) {
-        options |= PCRE2_NO_AUTO_CAPTURE; /* ?: */
+        options |= PCRE2_NO_AUTO_CAPTURE; /* (?: and /n */
         sv_catpvn(wrapped, "n", 1);
     }
 #endif
