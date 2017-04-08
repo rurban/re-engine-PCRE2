@@ -154,14 +154,17 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 
     if (ri == NULL) {
         PCRE2_UCHAR buf[256];
-        pcre2_get_error_message(errcode, buf, sizeof(buf));
+        /* ignore matching errors. prefer the core error */
+        if (errcode < 100) { /* Compile errors */
+            pcre2_get_error_message(errcode, buf, sizeof(buf));
 #if PERL_VERSION > 10
-        Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
+            Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
 #else
-        Perl_warner(aTHX_ packWARN(WARN_REGEXP),
+            Perl_warner(aTHX_ packWARN(WARN_REGEXP),
 #endif
-            "PCRE2 compilation failed at offset %u: %s\n",
-            (unsigned)erroffset, buf);
+                        "PCRE2 compilation failed at offset %u: %s (%d)\n",
+                        (unsigned)erroffset, buf, errcode);
+        }
         return Perl_re_compile(aTHX_ pattern, flags);
     }
 #ifdef HAVE_JIT
@@ -299,8 +302,16 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 #ifdef HAVE_JIT
     pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) {
-        match_context = NULL; /*pcre2_match_context_create(NULL);*/
+#if 1
+        match_context = NULL;
+#else
+        /* no compile_context yet */
+        match_context = pcre2_match_context_create(NULL);
+        /* default MATCH_LIMIT: 10000000 - uint32_t,
+           but even 5120000000 is not big enough for the core test suite */
+        pcre2_set_match_limit(match_context, 5120000000);
         /*pcre2_jit_stack_assign(match_context, NULL, get_jit_stack());*/
+#endif
         rc = (I32)pcre2_jit_match(
             ri,
             (PCRE2_SPTR8)stringarg,
@@ -330,7 +341,9 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             pcre2_match_context_free(match_context);
 #endif
         if (rc != PCRE2_ERROR_NOMATCH) {
-            croak("PCRE2 error %d\n", rc);
+            PCRE2_UCHAR buf[256];
+            pcre2_get_error_message(rc, buf, sizeof(buf));
+            croak("PCRE2 match error: %s (%d)\n", buf, rc);
         }
         return 0;
     }

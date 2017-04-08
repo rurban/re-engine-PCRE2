@@ -68,3 +68,8 @@ Params
 Syck
 Util
 xsubpp
+DBI
+SQLite
+YAML
+cpan
+
