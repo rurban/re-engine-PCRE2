@@ -60,3 +60,11 @@ UTF
 lexically
 lookbehinds
 subpattern
+testsuite
+DBD
+EUMM
+LibXML
+Params
+Syck
+Util
+xsubpp

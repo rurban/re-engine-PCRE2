@@ -14,6 +14,10 @@ if (@ARGV) { # PREFIX=~
   }
 }
 
+# this merely checks for the existance of the library.
+# not if the static library can be used in a shared lib on ELF.
+# i.e. if fPIC is used or not.
+# we really need a fallback, like Alien::PCRE2 or shipped sources.
 eval 'use Devel::CheckLib;' and
   check_lib_or_exit(
     lib => 'pcre2-8',

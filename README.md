@@ -15,9 +15,16 @@ re::engine::PCRE2 - PCRE2 regular expression engine with jit
 Replaces perl's regex engine in a given lexical scope with PCRE2
 regular expressions provided by libpcre2-8.
 
-This provides jit support and faster matching, but may fail in
-corner cases. See [pcre2compat](http://www.pcre.org/current/doc/html/pcre2compat.html).
-It is typically 10% faster then the core regex engine.
+This provides jit support and faster matching, but may fail in corner
+cases. See
+[pcre2compat](http://www.pcre.org/current/doc/html/pcre2compat.html).
+It is typically 10% faster than the core regex engine. _(realistic
+benchmarks outstanding)_.
+
+The goal is to pass the full core re testsuite, identify all
+problematic patterns and fall-back to the core re engine.  From the
+1330 core tests, 46 currently fail. 90% of the most popular cpan
+modules do work fine already.  See ["FAILING TESTS"](#failing-tests).
 
 Note that some packaged libpcre2-8 libraries do not enable the jit
 compiler. `CFLAGS=-fPIC cmake -DPCRE2_SUPPORT_JIT=ON; make`
@@ -227,14 +234,14 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
 
 - size (RX)
 
-    Return the size of the compiled pattern in bytes (for all three
-    libraries).  This value includes the size of the general data block
-    that precedes the code units of the compiled pattern itself. The value
-    that is used when `pcre2_compile()` is getting memory in which to
-    place the compiled pattern may be slightly larger than the value
-    returned by this option, because there are cases where the code that
-    calculates the size has to over-estimate. Processing a pattern with
-    the JIT compiler does not alter the value returned by this option.
+    Return the size of the compiled pattern in bytes.  This value includes
+    the size of the general data block that precedes the code units of the
+    compiled pattern itself. The value that is used when
+    `pcre2_compile()` is getting memory in which to place the compiled
+    pattern may be slightly larger than the value returned by this option,
+    because there are cases where the code that calculates the size has to
+    over-estimate. Processing a pattern with the JIT compiler does not
+    alter the value returned by this option.
 
 # FUNCTIONS
 
@@ -314,6 +321,71 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
 
     The default is 1 for UNICODE, as all libpcre2 libraries are now compiled
     with unicode support builtin. (`--enable-unicode`).
+
+# FAILING TESTS
+
+About 90% of all core tests and cpan modules do work with re::engine::PCRE2
+already, but there are still some unresolved problems.
+Try the new faster matcher with `export PERL5OPT=-Mre::engine::PCRE2`.
+
+Known problematic popular modules are: Test-Harness-3.38,
+Params-Util-1.07 _t/12\_main.t 552-553, 567-568_, HTML-Parser-3.72
+_(unicode)_, DBI-1.636 _(EUMM problem)_, DBD-SQLite-1.54
+_(xsubpp)_, Sub-Name-0.21 _t/exotic\_names.t:105_, XML-LibXML-2.0129
+_(local charset)_, Module-Install-1.18 _unrecognized character after
+(?  or (?-_, Text-CSV\_XS-1.28 _(unicode)_, YAML-Syck-1.29, MD5-2.03,
+XML-Parser-2.44, Module-Build-0.4222, libwww-perl-6.25.
+
+As of 0.04 the following core regression tests still fail:
+
+    perl -C -Mblib t/perl/regexp.t | grep -a TODO
+
+    301: '^'i:ABC:y:$&: => `'', match=
+    353: '(a+|b){0,1}?'i:AB:y:$&-$1:- => `A-A', match=1
+    357: 'a*'i::y:$&: => `'', match=
+    497: a(?{"{"})b:-:c:-:Sequence (?{...}) not terminated or not {}-balanced => `-', match=
+    589:(utf8::upgrade($subject)) ([[:^alnum:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:__--  ${nulnul}${ffff} => `__--  \0\0Ã¿Ã¿', match=1
+    590:(utf8::upgrade($subject)) ([[:^ascii:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:${ffff} => `Ã¿Ã¿', match=1
+    594:(utf8::upgrade($subject)) ([[:^print:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:${nulnul}${ffff} => `\0\0Ã¿Ã¿', match=1
+    597:(utf8::upgrade($subject)) ([[:^word:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:--  ${nulnul}${ffff} => `--  \0\0Ã¿Ã¿', match=1
+    599:(utf8::upgrade($subject)) ([[:^xdigit:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:Xy__--  ${nulnul}${ffff} => `Xy__--  \0\0Ã¿Ã¿', match=1
+    606: a{37,17}:-:c:-:Can't do {n,m} with n > m => `-', match=
+    813:.X(.+)+X:bbbbXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    814:.X(.+)+XX:bbbbXcXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    815:.XX(.+)+X:bbbbXXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    816:.X(.+)+X:bbbbXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    817:.X(.+)+XX:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    818:.XX(.+)+X:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    819:.X(.+)+[X]:bbbbXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    820:.X(.+)+[X][X]:bbbbXcXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    821:.XX(.+)+[X]:bbbbXXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    822:.X(.+)+[X]:bbbbXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    823:.X(.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    824:.XX(.+)+[X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    825:.[X](.+)+[X]:bbbbXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    826:.[X](.+)+[X][X]:bbbbXcXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    827:.[X][X](.+)+[X]:bbbbXXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
+    828:.[X](.+)+[X]:bbbbXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    829:.[X](.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    830:.[X][X](.+)+[X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
+    867: ^(a(b)?)+$:aba:y:-$1-$2-:-a-- => `-a-b-', match=1
+    868: ^(aa(bb)?)+$:aabbaa:y:-$1-$2-:-aa-- => `-aa-bb-', match=1
+    873: ^(a\1?){4}$:aaaaaa:y:$1:aa => `', match=
+    931:(??{}):x:y:-:- => error `Eval-group not allowed at runtime, use re 'eval' in regex m/(??{})/ at (eval 5345) line 2.'
+    1021: ^(<(?:[^<>]+|(?3)|(?1))*>)()(!>!>!>)$:<<!>!>!>><>>!>!>!>:y:$1:<<!>!>!>><>> => `', match=
+    1051: /^(?'main'<(?:[^<>]+|(?&crap)|(?&main))*>)(?'empty')(?'crap'!>!>!>)$/:<<!>!>!>><>>!>!>!>:y:$+{main}:<<!>!>!>><>> => `', match=
+    1291:(utf8::upgrade($subject)) foo(\R+)bar:foo\r
+    1293:(utf8::upgrade($subject)) (\R+)(\V):foo\r
+    1294:(utf8::upgrade($subject)) foo(\R)bar:foo\x{85}bar:y:$1:\x{85} => `', match=
+    1295:(utf8::upgrade($subject)) (\V)(\R):foo\x{85}bar:y:$1-$2:o-\x{85} => `Â-', match=1
+    1307:(utf8::upgrade($subject)) foo(\v+)bar:foo\r
+    1309:(utf8::upgrade($subject)) (\v+)(\V):foo\r
+    1310:(utf8::upgrade($subject)) foo(\v)bar:foo\x{85}bar:y:$1:\x{85} => `', match=
+    1311:(utf8::upgrade($subject)) (\V)(\v):foo\x{85}bar:y:$1-$2:o-\x{85} => `Â-', match=1
+    1318:(utf8::upgrade($subject)) foo(\h+)bar:foo\t\x{A0}bar:y:$1:\t\x{A0} => `', match=
+    1320:(utf8::upgrade($subject)) (\h+)(\H):foo\t\x{A0}bar:y:$1-$2:\t\x{A0}-b => `     -Â', match=1
+    1321:(utf8::upgrade($subject)) foo(\h)bar:foo\x{A0}bar:y:$1:\x{A0} => `', match=
+    1322:(utf8::upgrade($subject)) (\H)(\h):foo\x{A0}bar:y:$1-$2:o-\x{A0} => `Â- ', match=1
 
 # AUTHORS
 
