@@ -100,7 +100,7 @@ a[b-d]e	ace	y	$&	ace
 a[b-d]	aac	y	$&	ac
 a[-b]	a-	y	$&	a-
 a[b-]	a-	y	$&	a-
-a[b-a]	-	c	-	Invalid [] range \"b-a\"
+a[b-a]	-	c	-	Invalid [] range
 a[]b	-	c	-	Unmatched [
 a[	-	c	-	Unmatched [
 a]	a]	y	$&	a]
@@ -355,7 +355,7 @@ a[-]?c	ac	y	$&	ac
 'a[b-d]'i	AAC	y	$&	AC
 'a[-b]'i	A-	y	$&	A-
 'a[b-]'i	A-	y	$&	A-
-'a[b-a]'i	-	c	-	Invalid [] range \"b-a\"
+'a[b-a]'i	-	c	-	Invalid [] range
 'a[]b'i	-	c	-	Unmatched [
 'a['i	-	c	-	Unmatched [
 'a]'i	A]	y	$&	A]

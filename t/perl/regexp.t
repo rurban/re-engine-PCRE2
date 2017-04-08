@@ -2,12 +2,13 @@
 
 use Test::More;
 
-# The tests are in a separate file 't/op/re_tests'.
+# The tests are in a separate file 't/perl/re_tests'.
 # Each line in that file is a separate test.
 # There are five columns, separated by tabs.
 #
-# Column 1 contains the pattern, optionally enclosed in C<''>.
-# Modifiers can be put after the closing C<'>.
+# Column 1 contains the pattern, optionally enclosed in C<''> C<::> or
+# C<//>.  Modifiers can be put after the closing delimiter.  C<''> will
+# automatically be added to any other patterns.
 #
 # Column 2 contains the string to be matched.
 #
@@ -17,6 +18,13 @@ use Test::More;
 # 	c	expect an error
 #	B	test exposes a known bug in Perl, should be skipped
 #	b	test exposes a known bug in Perl, should be skipped if noamp
+#	T	the test is a TODO (can be combined with y/n/c)
+#	M	skip test on miniperl (combine with y/n/c/T)
+#	t	test exposes a bug with threading, TODO if qr_embed_thr
+#       s       test should only be run for regex_sets_compat.t
+#       S       test should not be run for regex_sets_compat.t
+#       a       test should only be run on ASCII platforms
+#       e       test should only be run on EBCDIC platforms
 #
 # Columns 4 and 5 are used only if column 3 contains C<y> or C<c>.
 #
@@ -28,6 +36,8 @@ use Test::More;
 # Column 6, if present, contains a reason why the test is skipped.
 # This is printed with "skipped", for harness to pick up.
 #
+# Column 7 can be used for comments
+#
 # \n in the tests are interpolated, as are variables of the form ${\w+}.
 #
 # Blanks lines are treated as PASSING tests to keep the line numbers
@@ -38,6 +48,9 @@ use Test::More;
 #
 # Note that columns 2,3 and 5 are all enclosed in double quotes and then
 # evalled; so something like a\"\x{100}$1 has length 3+length($1).
+#
+# \x... and \o{...} constants are automatically converted to the native
+# character set if necessary.  \[0-7] constants aren't
 
 my $file;
 BEGIN {
@@ -50,6 +63,29 @@ BEGIN {
     }
 }
 
+sub _comment {
+    return map { /^#/ ? "$_\n" : "# $_\n" }
+           map { split /\n/ } @_;
+}
+
+sub convert_from_ascii {
+    my $string = shift;
+
+    #my $save = $string;
+    # Convert \x{...}, \o{...}
+    $string =~ s/ (?<! \\ ) \\x\{ ( .*? ) } / "\\x{" . sprintf("%X", utf8::unicode_to_native(hex $1)) .  "}" /gex;
+    $string =~ s/ (?<! \\ ) \\o\{ ( .*? ) } / "\\o{" . sprintf("%o", utf8::unicode_to_native(oct $1)) .  "}" /gex;
+
+    # Convert \xAB
+    $string =~ s/ (?<! \\ ) \\x ( [A-Fa-f0-9]{2} ) / "\\x" . sprintf("%02X", utf8::unicode_to_native(hex $1)) /gex;
+
+    # Convert \xA
+    $string =~ s/ (?<! \\ ) \\x ( [A-Fa-f0-9] ) (?! [A-Fa-f0-9] ) / "\\x" . sprintf("%X", utf8::unicode_to_native(hex $1)) /gex;
+
+    #print STDERR __LINE__, ": $save\n$string\n" if $save ne $string;
+    return $string;
+}
+
 use strict;
 use warnings FATAL=>"all";
 use vars qw($iters $numtests $bang $ffff $nulnul $OP);
@@ -59,7 +95,8 @@ use re 'eval';
 use Data::Dumper;
 
 if (!defined $file) {
-    open(TESTS,'re_tests') || open(TESTS,'t/re_tests') || open(TESTS,'t/perl/re_tests')
+    open(TESTS,'t/perl/re_tests') || open(TESTS,'re_tests') || open(TESTS,'t/re_tests')
+      || die "Can't open t/perl/re_tests: $!";
 }
 
 my @tests = <TESTS>;
@@ -69,7 +106,7 @@ close TESTS;
 $bang = sprintf "\\%03o", ord "!"; # \41 would not be portable.
 $ffff  = chr(0xff) x 2;
 $nulnul = "\0" x 2;
-$OP = $qr ? 'qr' : 'm';
+my $OP = $qr ? 'qr' : 'm';
 
 $| = 1;
 printf "1..%d\n# $iters iterations\n", scalar @tests;
@@ -95,10 +132,10 @@ my @pcre_fail = (
     # even with huge set_match_limit 512mill
     872 .. 889, # .X(.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
-    # offset +59
     # err: [a-[:digit:]] => range out of order in character class
     # 892,894,896,898,900,902, # was different False range error msg
 
+    # offset: +59
     # aba =~ ^(a(b)?)+$ and aabbaa =~ ^(aa(bb)?)+$
     #867 .. 868,
     # err: (?!)+ => nothing to repeat
@@ -118,12 +155,12 @@ my @pcre_fail = (
     # These cause utf8 warnings, see above
     #1307, 1309, 1310, 1311, 1312, 1318, 1320 .. 1323,
     
-    892, # () ([a-\d]+):-:sc:-:False [] range => `-', match=1
-    894, # ([\d-z]+):-:sc:$1:False [] range => `-', match=1
-    896, # ([\d-\s]+):-:sc:$1:False [] range => `-', match=1
-    898, # ([a-[:digit:]]+):-:sc:-:False [] range => `-', match=1
-    900, # ([[:digit:]-z]+):-:sc:c:False [] range => `c', match=1
-    902, # ([[:digit:]-[:alpha:]]+):-:sc:-:False [] range => `-', match=1
+    #892, # ([a-\d]+):-:sc:-:False [] range => `-', match=1
+    #894, # ([\d-z]+):-:sc:$1:False [] range => `-', match=1
+    #896, # ([\d-\s]+):-:sc:$1:False [] range => `-', match=1
+    #898, # ([a-[:digit:]]+):-:sc:-:False [] range => `-', match=1
+    #900, # ([[:digit:]-z]+):-:sc:c:False [] range => `c', match=1
+    #902, # ([[:digit:]-[:alpha:]]+):-:sc:-:False [] range => `-', match=1
     933, # ^(a(b)?)+$:aba:y:-$1-$2-:-a-- => `-a-b-', match=1
     934, # ^(aa(bb)?)+$:aabbaa:y:-$1-$2-:-aa-- => `-aa-bb-', match=1
     939, # ^(a\1?){4}$:aaaaaa:y:$1:aa => `', match=
@@ -262,18 +299,47 @@ foreach (@tests) {
     }
     chomp;
     s/\\n/\n/g;
-    my ($pat, $subject, $result, $repl, $expect, $reason) = split(/\t/,$_,6);
+    my ($pat, $subject, $result, $repl, $expect, $reason, $comment) = split(/\t/,$_,7);
+    if (!defined $subject) {
+        die "Bad test definition on line $test: $_\n";
+    }
     $reason = '' unless defined $reason;
     my $input = join(':',$pat,$subject,$result,$repl,$expect);
     $pat = "'$pat'" unless $pat =~ /^[:'\/]/;
     $pat =~ s/(\$\{\w+\})/$1/eeg;
     $pat =~ s/\\n/\n/g;
+    $pat = convert_from_ascii($pat) if ord("A") != 65;
+
+    $subject = convert_from_ascii($subject) if ord("A") != 65;
     $subject = eval qq("$subject"); die $@ if $@;
+
+    $expect = convert_from_ascii($expect) if ord("A") != 65;
     $expect  = eval qq("$expect"); die $@ if $@;
     $expect = $repl = '-' if $skip_amp and $input =~ /\$[&\`\']/;
+
+    #my $todo_qr = $qr_embed_thr && ($result =~ s/t//);
     my $skip = ($skip_amp ? ($result =~ s/B//i) : ($result =~ s/B//));
+    ++$skip if $result =~ s/M// && !defined &DynaLoader::boot_DynaLoader;
+    # regex_sets sS ? those 6 tests are failing
+    $result =~ s/[sS]//g;
+    if ($result =~ s/a// && ord("A") != 65) {
+        $skip++;
+        $reason = "Test is only valid for ASCII platforms.  $reason";
+    }
+    if ($result =~ s/e// && ord("A") != 193) {
+        $skip++;
+        $reason = "Test is only valid for EBCDIC platforms.  $reason";
+    }
     $reason = 'skipping $&' if $reason eq  '' && $skip_amp;
     $result =~ s/B//i unless $skip;
+
+    my $todo= $result =~ s/T// ? " # TODO" : "";
+    $pcre_fail{$test}++ if $todo;
+    my $testname= $test;
+    if ($comment) {
+        $comment=~s/^\s*(?:#\s*)?//;
+        $testname .= " - $comment" if $comment;
+    }
 
     for my $study ('', 'study $subject', 'utf8::upgrade($subject)',
 		   'utf8::upgrade($subject); study $subject') {
@@ -318,8 +384,12 @@ EOFCODE
             }
 	}
 	chomp( my $err = $@ );
-	if ($result eq 'c' && $err) {
-	    #if ($err !~ m!^\Q$expect!) { print "not ok $test (compile) $input => `$err'\n"; next TEST }
+	if ($result =~ /c/) {
+	    if ($err !~ m!^\Q$expect!) {
+                my %remaining_errors = (1459=>1,1462=>1,1471=>1,1472=>1,1473=>1);
+                $todo = $remaining_errors{$test} ? " # TODO" : $todo;
+                print "not ok $testname$todo (compile) $input => '$err'\n"; next TEST
+            }
 	    last;  # no need to study a syntax error
 	}
 	elsif ( $skip ) {
@@ -331,7 +401,7 @@ EOFCODE
             print "#TODO " if exists $pcre_fail{$test};
             print "$input => error `$err'\n$code\n"; next TEST;
 	}
-	elsif ($result eq 'n') {
+	elsif ($result =~ /n/) {
 	    if ($match) {
               print "not ok $test ";
               print "#TODO " if exists $pcre_fail{$test};
