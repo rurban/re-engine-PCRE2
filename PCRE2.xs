@@ -302,7 +302,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     PCRE2_SIZE *ovector;
     pcre2_match_data *match_data;
     regexp * re = RegSV(rx);
-    pcre2_code *ri = re->pprivate;
+    pcre2_code *ri = (pcre2_code *)re->pprivate;
 
     match_data = pcre2_match_data_create_from_pattern(ri, NULL);
     pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
@@ -414,15 +414,15 @@ PCRE2_checkstr(pTHX_ REGEXP * const rx)
 void
 PCRE2_free(pTHX_ REGEXP * const rx)
 {
-    regexp * re = RegSV(rx);
-    pcre2_code_free(re->pprivate);
+    regexp *re = RegSV(rx);
+    pcre2_code_free((pcre2_code *)re->pprivate);
 }
 
 void *
 PCRE2_dupe(pTHX_ REGEXP * const rx, CLONE_PARAMS *param)
 {
     PERL_UNUSED_ARG(param);
-    regexp * re = RegSV(rx);
+    regexp *re = RegSV(rx);
     return re->pprivate;
 }
 
@@ -497,9 +497,10 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecou
 #define DECL_U32_PATTERN_INFO(rx,name,UCNAME) \
 PERL_STATIC_INLINE U32 \
 PCRE2_##name(REGEXP* rx) {   \
-    regexp * re = RegSV(rx); \
+    regexp *re = RegSV(rx); \
+    pcre2_code *ri = (pcre2_code *)re->pprivate; \
     U32 retval = -1; \
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_##UCNAME, &retval); \
+    pcre2_pattern_info(ri, PCRE2_INFO_##UCNAME, &retval); \
     return retval; \
 }
 
@@ -562,8 +563,9 @@ firstbitmap(REGEXP *rx)
 PROTOTYPE: $
 PPCODE:
     char* table;
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_FIRSTBITMAP, table);
+    regexp *re = RegSV(rx);
+    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    pcre2_pattern_info(ri, PCRE2_INFO_FIRSTBITMAP, table);
     if (table)
         mXPUSHp(table, 256/8);
 
@@ -630,8 +632,9 @@ nametable(REGEXP *rx)
 PROTOTYPE: $
 PPCODE:
     U8* table;
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NAMETABLE, &RETVAL);
+    regexp *re = RegSV(rx);
+    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    pcre2_pattern_info(ri, PCRE2_INFO_NAMETABLE, &RETVAL);
     if (table)
         mXPUSHp(table, strlen(table));
 
@@ -645,8 +648,9 @@ U32
 recursionlimit(REGEXP *rx)
 PROTOTYPE: $
 CODE:
-    regexp * re = RegSV(rx);
-    if (pcre2_pattern_info(re->pprivate, PCRE2_INFO_RECURSIONLIMIT, &RETVAL) < 0)
+    regexp *re = RegSV(rx);
+    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    if (pcre2_pattern_info(ri, PCRE2_INFO_RECURSIONLIMIT, &RETVAL) < 0)
         XSRETURN_UNDEF;
 OUTPUT:
     RETVAL
