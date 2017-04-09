@@ -4,6 +4,8 @@
 #define SVt_REGEXP SVt_PVMG
 #endif
 
+typedef REGEXP REGEXP_NN;
+
 START_EXTERN_C
 EXTERN_C const regexp_engine pcre2_engine;
 #if PERL_VERSION < 12

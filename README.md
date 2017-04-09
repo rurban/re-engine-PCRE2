@@ -238,6 +238,18 @@ E.g. hasbackslashc and framesize.
     See ["config (OPTION)"](#config-option).
     The setter method is not yet implemented.
 
+- offsetlimit (RX, \[INT\])
+
+    Get or set the offset\_limit in the match context.
+    The method is not yet implemented.
+
+- parenslimit (RX, \[INT\])
+
+    Get or set the parens\_nest\_limit in the match context.
+    The default is the build-time 'PARENSLIMIT' option, 250.
+    See ["config (OPTION)"](#config-option).
+    The method is not yet implemented.
+
 - recursionlimit (RX, \[INT\])
 
     Get or set a recursion limit, i.e. the pcre specific
@@ -279,18 +291,6 @@ E.g. hasbackslashc and framesize.
 
     unimport sets the regex engine to the previous one.
     If PCRE2 with the previous context options.
-
-- offsetlimit (\[INT\])
-
-    Get or set the offset\_limit in the match context.
-    The method is not yet implemented.
-
-- parenslimit (\[INT\])
-
-    Get or set the parens\_nest\_limit in the match context.
-    The default is the build-time 'PARENSLIMIT' option, 250.
-    See ["config (OPTION)"](#config-option).
-    The method is not yet implemented.
 
 - ENGINE
 

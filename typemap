@@ -1,4 +1,5 @@
 REGEXP *       T_RX_OBJ
+REGEXP_NN *    T_RX_NN
 
 INPUT
 
@@ -13,3 +14,13 @@ T_RX_OBJ
         }
         else
               croak(\"$var is of type %d, not a reference to REGEXP\", SvTYPE($arg));
+
+T_RX_NN
+        if (SvROK($arg)) {
+            int type = SvTYPE(SvRV($arg));
+            if (type == SVt_REGEXP || type == SVt_PVMG) {
+                $var = ($type)SvRV($arg);
+            }
+            else
+                croak(\"ref to $var is of type %d, not a reference to REGEXP\", type);
+        }

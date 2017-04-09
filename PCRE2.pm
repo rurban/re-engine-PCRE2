@@ -9,23 +9,74 @@ use XSLoader ();
 
 # All engines should subclass the core Regexp package
 our @ISA = 'Regexp';
+our @_CONTEXT_STACK;
 
 XSLoader::load(__PACKAGE__, $XS_VERSION);
 
 # set'able via import
+our %CONTEXT_OPTIONS;
+# max_pattern_length parenslimit
 our @CONTEXT_OPTIONS = qw(
-  bsr max_pattern_length newline parenslimit
-  matchlimit offsetlimit recursionlimit heaplimit
+  bsr newline matchlimit offsetlimit recursionlimit heaplimit
 );
 
-# TODO: set context options, and save prev. ones for unimport.
-# compile-ctx and match-ctx (see above: @CONTEXT_OPTIONS)
+sub _check_context_option {
+    my $o = shift;
+    if (!%CONTEXT_OPTIONS) {
+        %CONTEXT_OPTIONS = map { $_ => undef } @CONTEXT_OPTIONS;
+    }
+    if (!exists $CONTEXT_OPTIONS{$o}) {
+        require Carp;
+        Carp::croak("Invalid PCRE2 context option $o");
+        return 0;
+    }
+    1
+}
+
+# set context options, and save prev. ones for unimport.
+# compile-ctx and match-ctx
 sub import {
-  $^H{regcomp} = re::engine::PCRE2::ENGINE();
+    my $oldengine = $^H{regcomp};
+    $^H{regcomp} = re::engine::PCRE2::ENGINE();
+    shift;
+    my %opts;
+    my @old = ($oldengine);
+    my $dummy = qr/./;
+    while (@_) {
+        my $m = shift;
+        my $v = shift;
+        if (_check_context_option($m)) {
+            no strict 'refs';
+            my $old = &{"re::engine::PCRE2::".$m}($dummy);
+            # save old value
+            push @old, $m, $old;
+            &{"re::engine::PCRE2::".$m}($dummy, $v);
+        }
+    }
+    push @_CONTEXT_STACK, [ @old ] if @old;
 }
 
 sub unimport {
-  delete $^H{regcomp} if $^H{regcomp} == re::engine::PCRE2::ENGINE();
+    # restore the old context values
+    my $old = pop @_CONTEXT_STACK;
+    if ($old) {
+        my $dummy = qr/./;
+        my @old = @$old;
+        my $engine = pop @old;
+        # stacked new
+        if ($engine == re::engine::PCRE2::ENGINE()) {
+            no strict 'refs';
+            while (@old) {
+                my $m = pop @old;
+                my $v = pop @old; # undef
+                &{"re::engine::PCRE2::".$m}($dummy, $v);
+            }
+        } else { # old was core
+            delete $^H{regcomp} if $^H{regcomp} == re::engine::PCRE2::ENGINE();
+        }
+    } else {
+        delete $^H{regcomp} if $^H{regcomp} == re::engine::PCRE2::ENGINE();
+    }
 }
 
 1;
@@ -276,6 +327,18 @@ The default is the build-time 'NEWLINE' option, i.e. 2 on non-windows systems.
 See L</config (OPTION)>.
 The setter method is not yet implemented.
 
+=item offsetlimit (RX, [INT])
+
+Get or set the offset_limit in the match context.
+The method is not yet implemented.
+
+=item parenslimit (RX, [INT])
+
+Get or set the parens_nest_limit in the match context.
+The default is the build-time 'PARENSLIMIT' option, 250.
+See L</config (OPTION)>.
+The method is not yet implemented.
+
 =item recursionlimit (RX, [INT])
 
 Get or set a recursion limit, i.e. the pcre specific
@@ -321,18 +384,6 @@ See L<PCRE2 NATIVE API COMPILE CONTEXT FUNCTIONS|http://www.pcre.org/current/doc
 
 unimport sets the regex engine to the previous one.
 If PCRE2 with the previous context options.
-
-=item offsetlimit ([INT])
-
-Get or set the offset_limit in the match context.
-The method is not yet implemented.
-
-=item parenslimit ([INT])
-
-Get or set the parens_nest_limit in the match context.
-The default is the build-time 'PARENSLIMIT' option, 250.
-See L</config (OPTION)>.
-The method is not yet implemented.
 
 =item ENGINE
 
