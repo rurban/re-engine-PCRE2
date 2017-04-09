@@ -7,7 +7,7 @@
 #include <pcre2.h>
 #include "PCRE2.h"
 #include "regcomp.h"
-#define HAVE_JIT
+#undef USE_MATCH_CONTEXT
 
 #ifndef strEQc
 # define strEQc(s, c) strEQ(s, ("" c ""))
@@ -19,6 +19,20 @@ static char retbuf[64];
 #define RegSV(p) SvANY(p)
 #else
 #define RegSV(p) (p)
+#endif
+
+#ifdef USE_MATCH_CONTEXT
+static pcre2_jit_stack *jit_stack = NULL;
+static pcre2_compile_context *compile_context = NULL;
+static pcre2_match_context *match_context = NULL;
+
+/* default is 32k already */
+static pcre2_jit_stack *get_jit_stack(void)
+{
+    if (!jit_stack)
+        jit_stack = pcre2_jit_stack_create(32*1024, 1024*1024, NULL);
+    return jit_stack;
+}
 #endif
 
 REGEXP *
@@ -149,7 +163,11 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         options,      /* options */
         &errcode,     /* errors */
         &erroffset,   /* error offset */
-        NULL          /* &pcre2_compile_context */
+#ifdef USE_MATCH_CONTEXT
+        &compile_context
+#else
+        NULL
+#endif
     );
 
     if (ri == NULL) {
@@ -167,11 +185,9 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         }
         return Perl_re_compile(aTHX_ pattern, flags);
     }
-#ifdef HAVE_JIT
     /* pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) */
     pcre2_jit_compile(ri, PCRE2_JIT_COMPLETE); /* no partial matches */
-#endif
 
 #if PERL_VERSION >= 12
     rx = (REGEXP*) newSV_type(SVt_REGEXP);
@@ -266,19 +282,6 @@ REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
 }
 #endif
 
-#ifdef HAVE_JIT
-static pcre2_jit_stack *jit_stack = NULL;
-static pcre2_match_context *match_context;
-
-/* default is 32k already */
-static pcre2_jit_stack *get_jit_stack(void)
-{
-    if (!jit_stack)
-        jit_stack = pcre2_jit_stack_create(32*1024, 1024*1024, NULL);
-    return jit_stack;
-}
-#endif
-
 I32
 #if PERL_VERSION < 20
 PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
@@ -299,17 +302,14 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     pcre2_code *ri = re->pprivate;
 
     match_data = pcre2_match_data_create_from_pattern(ri, NULL);
-#ifdef HAVE_JIT
     pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) {
-#if 1
-        match_context = NULL;
-#else
+#ifdef USE_MATCH_CONTEXT
         /* no compile_context yet */
-        match_context = pcre2_match_context_create(NULL);
+        match_context = pcre2_match_context_create(compile_context);
         /* default MATCH_LIMIT: 10000000 - uint32_t,
            but even 5120000000 is not big enough for the core test suite */
-        pcre2_set_match_limit(match_context, 5120000000);
+        /*pcre2_set_match_limit(match_context, 5120000000);*/
         /*pcre2_jit_stack_assign(match_context, NULL, get_jit_stack());*/
 #endif
         rc = (I32)pcre2_jit_match(
@@ -319,31 +319,39 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             stringarg - strbeg,   /* offset */
             re->intflags,         /* the options (again) */
             match_data,           /* block for storing the result */
+#ifdef USE_MATCH_CONTEXT
             match_context
-        );
-    } else
+#else
+            NULL
 #endif
+        );
+    } else {
         rc = (I32)pcre2_match(
             ri,
             (PCRE2_SPTR8)stringarg,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
-            0,                    /* the options (again?) re->intflags */
+            re->intflags & PCRE2_UTF, /* some options */
             match_data,           /* block for storing the result */
-            NULL                  /* use default match context */
+#ifdef USE_MATCH_CONTEXT
+            match_context
+#else
+            NULL
+#endif
         );
+    }
 
     /* Matching failed */
     if (rc < 0) {
         pcre2_match_data_free(match_data);
-#ifdef HAVE_JIT
+#ifdef USE_MATCH_CONTEXT
         if (have_jit && match_context)
             pcre2_match_context_free(match_context);
 #endif
         if (rc != PCRE2_ERROR_NOMATCH) {
             PCRE2_UCHAR buf[256];
             pcre2_get_error_message(rc, buf, sizeof(buf));
-            croak("PCRE2 match error: %s (%d)\n", buf, rc);
+            croak("PCRE2 match error: %s (%d)\n", buf, (int)rc);
         }
         return 0;
     }
@@ -365,7 +373,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
     /* XXX: nparens needs to be set to CAPTURECOUNT */
     pcre2_match_data_free(match_data);
-#ifdef HAVE_JIT
+#ifdef USE_MATCH_CONTEXT
     if (have_jit && match_context)
         pcre2_match_context_free(match_context);
 #endif
@@ -483,11 +491,42 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecou
 }
 #endif
 
-MODULE = re::engine::PCRE2	PACKAGE = re::engine::PCRE2
+#define DECL_U32_PATTERN_INFO(rx,name,UCNAME) \
+PERL_STATIC_INLINE U32 \
+PCRE2_##name(REGEXP* rx) {   \
+    regexp * re = RegSV(rx); \
+    U32 retval; \
+    pcre2_pattern_info(re->pprivate, PCRE2_INFO_##UCNAME, &retval); \
+    return retval; \
+}
+
+DECL_U32_PATTERN_INFO(rx, _alloptions, ALLOPTIONS)
+DECL_U32_PATTERN_INFO(rx, _argoptions, ARGOPTIONS)
+DECL_U32_PATTERN_INFO(rx, backrefmax, BACKREFMAX)
+DECL_U32_PATTERN_INFO(rx, bsr, BSR)
+DECL_U32_PATTERN_INFO(rx, capturecount, CAPTURECOUNT)
+DECL_U32_PATTERN_INFO(rx, firstcodetype, FIRSTCODETYPE)
+DECL_U32_PATTERN_INFO(rx, firstcodeunit, FIRSTCODEUNIT)
+DECL_U32_PATTERN_INFO(rx, hasbackslashc, HASBACKSLASHC)
+DECL_U32_PATTERN_INFO(rx, hascrorlf, HASCRORLF)
+DECL_U32_PATTERN_INFO(rx, jchanged, JCHANGED)
+DECL_U32_PATTERN_INFO(rx, jitsize, JITSIZE)
+DECL_U32_PATTERN_INFO(rx, lastcodetype, LASTCODETYPE)
+DECL_U32_PATTERN_INFO(rx, lastcodeunit, LASTCODEUNIT)
+DECL_U32_PATTERN_INFO(rx, matchempty, MATCHEMPTY)
+DECL_U32_PATTERN_INFO(rx, matchlimit, MATCHLIMIT)
+DECL_U32_PATTERN_INFO(rx, maxlookbehind, MAXLOOKBEHIND)
+DECL_U32_PATTERN_INFO(rx, minlength, MINLENGTH)
+DECL_U32_PATTERN_INFO(rx, namecount, NAMECOUNT)
+DECL_U32_PATTERN_INFO(rx, nameentrysize, NAMEENTRYSIZE)
+DECL_U32_PATTERN_INFO(rx, newline, NEWLINE)
+DECL_U32_PATTERN_INFO(rx, size, SIZE)
+
+MODULE = re::engine::PCRE2	PACKAGE = re::engine::PCRE2	PREFIX = PCRE2_
 PROTOTYPES: ENABLE
 
 void
-ENGINE(...)
+PCRE2_ENGINE(...)
 PROTOTYPE:
 PPCODE:
     mXPUSHs(newSViv(PTR2IV(&pcre2_engine)));
@@ -495,49 +534,24 @@ PPCODE:
 # pattern options
 
 U32
-_alloptions(REGEXP *rx)
+PCRE2__alloptions(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_ALLOPTIONS, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-_argoptions(REGEXP *rx)
+PCRE2__argoptions(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_ARGOPTIONS, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-backrefmax(REGEXP *rx)
+PCRE2_backrefmax(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_BACKREFMAX, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-bsr(REGEXP *rx)
+PCRE2_bsr(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_BSR, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-capturecount(REGEXP *rx)
+PCRE2_capturecount(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_CAPTURECOUNT, &RETVAL);
-OUTPUT:
-    RETVAL
 
 # returns a 256-bit table
 void
@@ -551,131 +565,60 @@ PPCODE:
         mXPUSHp(table, 256/8);
 
 U32
-firstcodetype(REGEXP *rx)
+PCRE2_firstcodetype(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_FIRSTCODETYPE, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-firstcodeunit(REGEXP *rx)
+PCRE2_firstcodeunit(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_FIRSTCODEUNIT, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-hasbackslashc(REGEXP *rx)
+PCRE2_hasbackslashc(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_HASBACKSLASHC, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-hascrorlf(REGEXP *rx)
+PCRE2_hascrorlf(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_HASCRORLF, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-jchanged(REGEXP *rx)
+PCRE2_jchanged(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_JCHANGED, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-jitsize(REGEXP *rx)
+PCRE2_jitsize(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_JITSIZE, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-lastcodetype(REGEXP *rx)
+PCRE2_lastcodetype(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_LASTCODETYPE, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-lastcodeunit(REGEXP *rx)
+PCRE2_lastcodeunit(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_LASTCODEUNIT, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-matchempty(REGEXP *rx)
+PCRE2_matchempty(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_MATCHEMPTY, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-matchlimit(REGEXP *rx)
+PCRE2_matchlimit(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    if (pcre2_pattern_info(re->pprivate, PCRE2_INFO_MATCHLIMIT, &RETVAL) < 0)
-        XSRETURN_EMPTY;
-OUTPUT:
-    RETVAL
 
 U32
-maxlookbehind(REGEXP *rx)
+PCRE2_maxlookbehind(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_MAXLOOKBEHIND, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-minlength(REGEXP *rx)
+PCRE2_minlength(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_MINLENGTH, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-namecount(REGEXP *rx)
+PCRE2_namecount(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NAMECOUNT, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
-nameentrysize(REGEXP *rx)
+PCRE2_nameentrysize(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NAMEENTRYSIZE, &RETVAL);
-OUTPUT:
-    RETVAL
 
 #if 0
 
@@ -692,13 +635,8 @@ PPCODE:
 #endif
 
 U32
-newline(REGEXP *rx)
+PCRE2_newline(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_NEWLINE, &RETVAL);
-OUTPUT:
-    RETVAL
 
 U32
 recursionlimit(REGEXP *rx)
@@ -711,16 +649,11 @@ OUTPUT:
     RETVAL
 
 U32
-size(REGEXP *rx)
+PCRE2_size(REGEXP *rx)
 PROTOTYPE: $
-CODE:
-    regexp * re = RegSV(rx);
-    pcre2_pattern_info(re->pprivate, PCRE2_INFO_SIZE, &RETVAL);
-OUTPUT:
-    RETVAL
 
 void
-JIT(...)
+PCRE2_JIT(...)
 PROTOTYPE:
 PPCODE:
     uint32_t jit;
@@ -739,7 +672,7 @@ PPCODE:
     }
 
 void
-config(char* opt)
+PCRE2_config(char* opt)
 PROTOTYPE: $
 PPCODE:
     int retint;

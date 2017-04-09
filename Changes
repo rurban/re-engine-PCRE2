@@ -1,5 +1,11 @@
 Revision history for re::engine::PCRE2
 
+0.07
+
+    - Prepare for compile and match contexts (import options)
+    - Simplify XS method implementation
+    - Add config and method tests
+
 0.06 Sun Apr 9 11:25:35 2017 +0200 rurban
 
     - Add BENCHMARKS to documentation: 40% faster

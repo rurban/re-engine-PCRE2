@@ -24,7 +24,8 @@ benchmarks outstanding)_.
 The goal is to pass the full core re testsuite, identify all
 problematic patterns and fall-back to the core re engine.  From the
 1330 core tests, 46 currently fail. 90% of the most popular cpan
-modules do work fine already.  See ["FAILING TESTS"](#failing-tests).
+modules do work fine already. Note that older perl version do fail
+more regression tests. See ["FAILING TESTS"](#failing-tests).
 
 Note that some packaged libpcre2-8 libraries do not enable the jit
 compiler. `CFLAGS=-fPIC cmake -DPCRE2_SUPPORT_JIT=ON; make`

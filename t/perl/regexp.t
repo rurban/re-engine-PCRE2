@@ -290,55 +290,55 @@ my @pcre_fail_ignored = (
 # version-specifics, older perls:
 push @pcre_fail, (
     1443,1444
-  ) if $] < 5.011;
+  ) if $] < 5.012;
 push @pcre_fail, (
     1515..1517, 1522..1523, 1525..1526, 1622..1625, 1638, 1643
-  ) if $] < 5.013;
+  ) if $] < 5.014;
 push @pcre_fail, (
     554, 629, 653, 659, 662, 672, 939, 1101..1104,
     1107..1110, 1116..1119, 1122, 1124..1125, 1128..1129,
     1285, 1287..1293, 1322, 1324,
     1329..1330, 1334, 1361, 1364,
-  ) if $] < 5.015;
+  ) if $] < 5.016;
 # many tests pass with PCRE but fail with core.
 # so it will be actually safer to use PCRE2 than core.
 if (!$INC{'re/engine/PCRE2.pm'}) {
-    push @pcre_skip, (629,1367) if $] < 5.013;
+    push @pcre_skip, (629,1367) if $] < 5.014;
     push @pcre_fail, (
         40..51, 90..91, 93..94, 96..97, 105, 356, 539,
         541, 543, 577, 1360, 1416, 1418, 1456..1457,
-        1461..1462) if $] < 5.011;
+        1461..1462) if $] < 5.012;
     push @pcre_fail, (
         1448, 1521, 1524, 1577..1578, 1594..1596,
-        1598, 1674..1675) if $] < 5.013;
+        1598, 1674..1675) if $] < 5.014;
     push @pcre_fail, (
-        1633..1634) if $] < 5.015;
+        1633..1634) if $] < 5.016;
     push @pcre_fail, (
         871, 1745, 1789, 1816
-        )  if $] < 5.017;
+        )  if $] < 5.018;
     push @pcre_fail, (
         1674..1675, 1856..1857, 1885..1886, 1889
-        )  if $] < 5.019;
+        )  if $] < 5.020;
     push @pcre_fail, (
-        138..142)  if $] < 5.021;
+        138..142)  if $] < 5.022;
     push @pcre_fail, (
-        139, 1958, 1965)  if $] < 5.023;
+        139, 1958, 1965)  if $] < 5.024;
     push @pcre_fail, (
-        1977)  if $] < 5.025;
+        1977)  if $] < 5.026;
 }
 
-push @pcre_fail, (1638)     if "$]" =~ /^5\.014/;
-push @pcre_fail, (554, 672) if "$]" =~ /^5\.01[46]/;
-push @pcre_fail, (629)      if "$]" =~ /^5\.01[468]/;
+push @pcre_fail, (1638)     if "$]" =~ /^5\.01[34]/;
+push @pcre_fail, (554, 672) if "$]" =~ /^5\.01[3-6]/;
+push @pcre_fail, (629)      if "$]" =~ /^5\.01[3-8]/;
 # codeblocks
-push @pcre_fail, (1770..1776, 1778, 1809) if "$]" =~ /^5\.016/;
+push @pcre_fail, (1770..1776, 1778, 1809) if "$]" =~ /^5\.01[56]/;
 push @pcre_fail, (1960..1962, 1966, 1987, 1989..1991)
   if "$]" =~ /^5\.020/;
 push @pcre_fail, (1960..1962, 1966, 1987..1992, 1994, 1996)
   if "$]" =~ /^5\.022/;
 # return in codeblock
 push @pcre_skip, (552,1753,1755,1758..1765)
-  if $] >= 5.016 and $] < 5.022; # syntax error crashes
+  if $] >= 5.015007 and $] < 5.022; # syntax error crashes
 push @pcre_skip, (1383,1399,1410,1548..1572,1639,1792,1830)
   if $] < 5.020; # Malformed UTF-8 character (fatal), group index overflow
 push @pcre_skip, (1981) if $] < 5.026; # crashes
