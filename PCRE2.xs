@@ -495,7 +495,7 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecou
 PERL_STATIC_INLINE U32 \
 PCRE2_##name(REGEXP* rx) {   \
     regexp * re = RegSV(rx); \
-    U32 retval; \
+    U32 retval = -1; \
     pcre2_pattern_info(re->pprivate, PCRE2_INFO_##UCNAME, &retval); \
     return retval; \
 }
@@ -644,7 +644,7 @@ PROTOTYPE: $
 CODE:
     regexp * re = RegSV(rx);
     if (pcre2_pattern_info(re->pprivate, PCRE2_INFO_RECURSIONLIMIT, &RETVAL) < 0)
-        XSRETURN_EMPTY;
+        XSRETURN_UNDEF;
 OUTPUT:
     RETVAL
 
