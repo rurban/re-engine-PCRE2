@@ -121,29 +121,22 @@ my (@pcre_fail, %pcre_fail, @pcre_skip, %pcre_skip);
 my @pcre_fail_ignored = (
 
     # new patterns and pcre2 fails: need to fallback
-    135..138, # \B{gcb} \B{lb} \B{sb} \B{wb}
-    344,      # '^'i:ABC:y:$&:
-    397,      # '(a+|b){0,1}?'i
-    401,      # 'a*'i $&
-    570,      # '(b.)c(?!\N)'s:a
-    646,647,656, # unicode
-    659,      # '[[:^cntrl:]]+'u:a\x80:y:$&:a
+    143..146, # \B{gcb} \B{lb} \B{sb} \B{wb}
+    352,      # '^'i:ABC:y:$&:
+    402,      # '(a+|b){0,1}?'i
+    409,      # 'a*'i $&
+    578,      # '(b.)c(?!\N)'s:a
+    654,655,664, # unicode
+    667,      # '[[:^cntrl:]]+'u:a\x80:y:$&:a
 
     # old PCRE fails:
     # Pathological patterns that run into run-time PCRE_ERROR_MATCHLIMIT,
     # even with huge set_match_limit 512mill
-    872 .. 889, # .X(.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    880 .. 897, # .X(.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 
-    # err: [a-[:digit:]] => range out of order in character class
-    # 892,894,896,898,900,902, # was different False range error msg
-
-    # offset: +59
-    # aba =~ ^(a(b)?)+$ and aabbaa =~ ^(aa(bb)?)+$
-    #867 .. 868,
+    # offset: +59+8
     # err: (?!)+ => nothing to repeat
     #970,
-    # XXX: <<<>>> pattern
-    #1021,
     # XXX: Some named capture error
     #1050 .. 1051,
     # (*F) / (*FAIL)
@@ -158,122 +151,177 @@ my @pcre_fail_ignored = (
     #1307, 1309, 1310, 1311, 1312, 1318, 1320 .. 1323,
 
     # test errors:    
-    892, # ([a-\d]+):-:c:-:False [] range => `-', match=1
-    894, # ([\d-z]+):-:cc:$1:False [] range => `-', match=1
-    896, # ([\d-\s]+):-:cc:$1:False [] range => `-', match=1
-    898, # ([a-[:digit:]]+):-:cc:-:False [] range => `-', match=1
-    900, # ([[:digit:]-z]+):-:cc:c:False [] range => `c', match=1
-    902, # ([[:digit:]-[:alpha:]]+):-:c:-:False [] range => `-', match=1
+    # => range out of order in character class TODO
+    900, # ([a-\d]+):-:c:-:False [] range => `-', match=1
+    902, # ([\d-z]+):-:cc:$1:False [] range => `-', match=1
+    904, # ([\d-\s]+):-:cc:$1:False [] range => `-', match=1
+    906, # ([a-[:digit:]]+):-:cc:-:False [] range => `-', match=1
+    908, # ([[:digit:]-z]+):-:cc:c:False [] range => `c', match=1
+    910, # ([[:digit:]-[:alpha:]]+):-:c:-:False [] range => `-', match=1
 
-    933, # ^(a(b)?)+$:aba:y:-$1-$2-:-a-- => `-a-b-', match=1
-    934, # ^(aa(bb)?)+$:aabbaa:y:-$1-$2-:-aa-- => `-aa-bb-', match=1
-    939, # ^(a\1?){4}$:aaaaaa:y:$1:aa => `', match=
-    997, #TODO (??{}):x:y:-:- => error `Eval-group not allowed at runtime, use re 'eval' in regex m/(??{})/ at (eval 5663) line 1.'
-    1088, # ^(<(?:[^<>]+|(?3)|(?1))*>)()(!>!>!>)$:<<!>!>!>><>>!>!>!>:y:$1:<<!>!>!>><>> => `', match=
-    1118, # /^(?'main'<(?:[^<>]+|(?&crap)|(?&main))*>)(?'empty')(?'crap'!>!>!>)$/:<<!>!>!>><>>!>!>!>:yM:$+{main}:<<!>!>!>><>> => `', match=
+    # aba =~ ^(a(b)?)+$ and aabbaa =~ ^(aa(bb)?)+$
+    941, # ^(a(b)?)+$:aba:y:-$1-$2-:-a-- => `-a-b-', match=1
+    942, # ^(aa(bb)?)+$:aabbaa:y:-$1-$2-:-aa-- => `-aa-bb-', match=1
+    947, # ^(a\1?){4}$:aaaaaa:y:$1:aa => `', match=
+
+    # empty codeblock
+    1005, #TODO (??{}):x:y:-:- => error `Eval-group not allowed at runtime, use re 'eval' in regex m/(??{})/ at (eval 5663) line 1.'
+
+    # XXX: <<<>>> pattern
+    1096, # ^(<(?:[^<>]+|(?3)|(?1))*>)()(!>!>!>)$:<<!>!>!>><>>!>!>!>:y:$1:<<!>!>!>><>> => `', match=
+    1126, # /^(?'main'<(?:[^<>]+|(?&crap)|(?&main))*>)(?'empty')(?'crap'!>!>!>)$/:<<!>!>!>><>>!>!>!>:yM:$+{main}:<<!>!>!>><>> => `', match=
 
     # XXX: \R doesn't match an utf8::upgraded \x{85}, we need to
     # always convert the subject and pattern to utf-8 for these cases
     # to work
-    1370, # (utf8::upgrade($subject)) foo(\R+)bar:foo\r
-    1372, # (utf8::upgrade($subject)) (\R+)(\V):foo\r
-    1373, # (utf8::upgrade($subject)) foo(\R)bar:foo\x{85}bar:y:$1:\x{85} => `', match=
-    1374, # (utf8::upgrade($subject)) (\V)(\R):foo\x{85}bar:y:$1-$2:o-\x{85} => `�-�', match=1
-    1386, # (utf8::upgrade($subject)) foo(\v+)bar:foo\r
-    1388..1390, # (utf8::upgrade($subject)) (\v+)(\V):foo\r
-    1397,1399..1401, # (utf8::upgrade($subject)) foo(\h+)bar:foo\t\x{A0}bar:y:$1:\t\x{A0} => `', match=
+    1378, # (utf8::upgrade($subject)) foo(\R+)bar:foo\r
+    1380, # (utf8::upgrade($subject)) (\R+)(\V):foo\r
+    1381, # (utf8::upgrade($subject)) foo(\R)bar:foo\x{85}bar:y:$1:\x{85} => `', match=
+    1382, # (utf8::upgrade($subject)) (\V)(\R):foo\x{85}bar:y:$1-$2:o-\x{85} => `�-�', match=1
+    1394, # (utf8::upgrade($subject)) foo(\v+)bar:foo\r
+    1396..1398, # (utf8::upgrade($subject)) (\v+)(\V):foo\r
+    1405,1407..1409, # (utf8::upgrade($subject)) foo(\h+)bar:foo\t\x{A0}bar:y:$1:\t\x{A0} => `', match=
 
-    1425, # /^\s*i.*?o\s*$/s:io
-    1438, #/\N{}\xe4/i:\xc4:y:$&:\xc4 => error `Unknown charname '' is deprecated. Its use will be fatal in Perl 5.28 at (eval 7892) line 2.'
-    1476, # /abc\N {U+41}/x:-:c:-:Missing braces => `-', match=
-    1477, # /abc\N {SPACE}/x:-:c:-:Missing braces => `-', match=
-    1482, # /\N{U+BEEF.BEAD}/:-:c:-: => `-', match=
-    1487, # \c`:-:ac:-:\"\\c`\" is more clearly written simply as \"\\ \" => `-', match=
-    1488, # \c1:-:ac:-:\"\\c1\" is more clearly written simply as \"q\" => `-', match=
-    1506, # \c?:\x9F:ey:$&:\x9F => `\', match=
-    1567, # [\8\9]:\000:Sn:-:- => `-', match=
-    1568, # [\8\9]:-:sc:$&:Unrecognized escape \\8 in character class => `[', match=
-    1574, # [\0]:-:sc:-:Need exactly 3 octal digits => `-', match=
-    1576, # [\07]:-:sc:-:Need exactly 3 octal digits => `-', match=
-    1577, # [\07]:7\000:Sn:-:- => `-', match=
-    1578, # [\07]:-:sc:-:Need exactly 3 octal digits => `-', match=
-    1591, # /\xe0\pL/i:\xc0a:y:$&:\xc0a => `/', match=
-    1610, # ^_?[^\W_0-9]\w\z:\xAA\x{100}:y:$&:\xAA\x{100} => `^', match=
-    1613, # /s/ai:\x{17F}:y:$&:\x{17F} => `/', match=
-    1622, # /[^\x{1E9E}]/i:\x{DF}:Sn:-:- => `-', match=
-    1631, # /^\p{L}/:\x{3400}:y:$&:\x{3400} => `�', match=1
-    1634, # /[s\xDF]a/ui:ssa:Sy:$&:ssa => `sa', match=1
-    1640, # /ff/i:\x{FB00}\x{FB01}:y:$&:\x{FB00} => `/', match=
-    1641, # /ff/i:\x{FB01}\x{FB00}:y:$&:\x{FB00} => `/', match=
-    1642, # /fi/i:\x{FB01}\x{FB00}:y:$&:\x{FB01} => `/', match=
-    1643, # /fi/i:\x{FB00}\x{FB01}:y:$&:\x{FB01} => `/', match=
-    1661, # /ffiffl/i:abcdef\x{FB03}\x{FB04}:y:$&:\x{FB03}\x{FB04} => `/', match=
-    1662, # /\xdf\xdf/ui:abcdefssss:y:$&:ssss => `/', match=
-    1664, # /st/i:\x{DF}\x{FB05}:y:$&:\x{FB05} => `/', match=
-    1665, # /ssst/i:\x{DF}\x{FB05}:y:$&:\x{DF}\x{FB05} => `/', match=
-    1670, # /[[:lower:]]/i:\x{100}:y:$&:\x{100} => `/', match=
-    1671, # /[[:upper:]]/i:\x{101}:y:$&:\x{101} => `/', match=
-    1675, # /s\xDF/ui:\xDFs:y:$&:\xDFs => `/', match=
-    1676, # /sst/ui:s\N{LATIN SMALL LIGATURE ST}:y:$&:s\N{LATIN SMALL LIGATURE ST} => `/', match=
-    1677, # /sst/ui:s\N{LATIN SMALL LIGATURE LONG S T}:y:$&:s\N{LATIN SMALL LIGATURE LONG S T} => `/', match=
-    1691, # /[[:alnum:]]/:\x{2c1}:y:-:- => `-', match=
-    1693, # /[[:alpha:]]/:\x{2c1}:y:-:- => `-', match=
-    1695, # /[[:graph:]]/:\x{377}:y:-:- => `-', match=
-    1698, # /[[:lower:]]/:\x{101}:y:-:- => `-', match=
-    1700, # /[[:print:]]/:\x{377}:y:-:- => `-', match=
-    1703, # /[[:punct:]]/:\x{37E}:y:-:- => `-', match=
-    1705, # /[[:upper:]]/:\x{100}:y:-:- => `-', match=
-    1707, # /[[:word:]]/:\x{2c1}:y:-:- => `-', match=
-    1731, # ^(.)(?:(..)|B)[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
-    1733, # ^(.)(?:BC(.)|B)[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
-    1735, # ^(.)(?:(.)+)*[BX]:ABCDE:y:$^N-$+:A-A => `-', match=1
-    1738, # ^(.)(BC)*[BX]:ABCDE:y:$^N-$+:A-A => `-', match=1
-    1741, # ^(.)(B)*.[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
-    1785..1787, # (utf8::upgrade($subject)) /[\H]/:\x{BF}:y:$&:\xBF => `�', match=1
-    #1786 (utf8::upgrade($subject)) /[\H]/:\x{A0}:n:-:- => false positive
-    #1787 (utf8::upgrade($subject)) /[\H]/:\x{A1}:y:$&:\xA1 => `�', match=1
-    1796..1799, # \w:\x{200C}:y:$&:\x{200C} => `\', match=
-    #1797, # \W:\x{200C}:n:-:- => false positive
-    #1798, # \w:\x{200D}:y:$&:\x{200D} => `\', match=
-    #1799, # \W:\x{200D}:n:-:- => false positive
-    1810..1812, # /^\D{11}/a:\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}:n:-:- => false positive
-    1815, # (utf8::upgrade($subject)) \Vn:\xFFn/:y:$&:\xFFn => `�n', match=1
-    1822, # a?\X:a\x{100}:y:$&:a\x{100} => `a�', match=1
-    1884, # /^\S+=/d:\x{3a3}=\x{3a0}:y:$&:\x{3a3}= => `Σ=', match=1
-    1885, # /^\S+=/u:\x{3a3}=\x{3a0}:y:$&:\x{3a3}= => `Σ=', match=1
-    1928, # /[a-z]/i:\N{KELVIN SIGN}:y:$&:\N{KELVIN SIGN} => `/', match=
-    1929, # /[A-Z]/ia:\N{KELVIN SIGN}:y:$&:\N{KELVIN SIGN} => `/', match=
-    1931, # /[A-Z]/i:\N{LATIN SMALL LETTER LONG S}:y:$&:\N{LATIN SMALL LETTER LONG S} => `/', match=
-    1937, # /(a+){1}+a/:aaa:n:-:- => false positive
-    1956, # \N(?#comment){SPACE}:A:c:-:Missing braces on \\N{} => `-', match=
-    1968, # aa$|a(?R)a|a:aaa:y:$&:aaa => `a', match=1
+    # regressions in 5.8.x (only) introduced by change 30638
+    1433, # /^\s*i.*?o\s*$/s:io
+    
+    1446, #/\N{}\xe4/i:\xc4:y:$&:\xc4 => error `Unknown charname '' is deprecated. Its use will be fatal in Perl 5.28 at (eval 7892) line 2.'
+    1484, # /abc\N {U+41}/x:-:c:-:Missing braces => `-', match=
+    1485, # /abc\N {SPACE}/x:-:c:-:Missing braces => `-', match=
+    1490, # /\N{U+BEEF.BEAD}/:-:c:-: => `-', match=
+    
+    1495, # \c`:-:ac:-:\"\\c`\" is more clearly written simply as \"\\ \" => `-', match=
+    1496, # \c1:-:ac:-:\"\\c1\" is more clearly written simply as \"q\" => `-', match=
+    
+    1514, # \c?:\x9F:ey:$&:\x9F => `\', match=
+    
+    1575, # [\8\9]:\000:Sn:-:- => `-', match=
+    1576, # [\8\9]:-:sc:$&:Unrecognized escape \\8 in character class => `[', match=
+    
+    1582, # [\0]:-:sc:-:Need exactly 3 octal digits => `-', match=
+    1584, # [\07]:-:sc:-:Need exactly 3 octal digits => `-', match=
+    1585, # [\07]:7\000:Sn:-:- => `-', match=
+    1586, # [\07]:-:sc:-:Need exactly 3 octal digits => `-', match=
+    
+    1599, # /\xe0\pL/i:\xc0a:y:$&:\xc0a => `/', match=
+    
+    1618, # ^_?[^\W_0-9]\w\z:\xAA\x{100}:y:$&:\xAA\x{100} => `^', match=
+    1621, # /s/ai:\x{17F}:y:$&:\x{17F} => `/', match=
+    
+    1630, # /[^\x{1E9E}]/i:\x{DF}:Sn:-:- => `-', match=
+    1639, # /^\p{L}/:\x{3400}:y:$&:\x{3400} => `�', match=1
+    1642, # /[s\xDF]a/ui:ssa:Sy:$&:ssa => `sa', match=1
+    
+    1648, # /ff/i:\x{FB00}\x{FB01}:y:$&:\x{FB00} => `/', match=
+    1649, # /ff/i:\x{FB01}\x{FB00}:y:$&:\x{FB00} => `/', match=
+    1650, # /fi/i:\x{FB01}\x{FB00}:y:$&:\x{FB01} => `/', match=
+    1651, # /fi/i:\x{FB00}\x{FB01}:y:$&:\x{FB01} => `/', match=
+
+    # These test that doesn't cut-off matching too soon in the string for
+    # multi-char folds
+    1669, # /ffiffl/i:abcdef\x{FB03}\x{FB04}:y:$&:\x{FB03}\x{FB04} => `/', match=
+    1670, # /\xdf\xdf/ui:abcdefssss:y:$&:ssss => `/', match=
+    1672, # /st/i:\x{DF}\x{FB05}:y:$&:\x{FB05} => `/', match=
+    1673, # /ssst/i:\x{DF}\x{FB05}:y:$&:\x{DF}\x{FB05} => `/', match=
+    # [perl #101970]
+    1678, # /[[:lower:]]/i:\x{100}:y:$&:\x{100} => `/', match=
+    1679, # /[[:upper:]]/i:\x{101}:y:$&:\x{101} => `/', match=
+    # Was matching 'ss' only and failing the entire match, not seeing the
+    # alternative that would succeed
+    1683, # /s\xDF/ui:\xDFs:y:$&:\xDFs => `/', match=
+    1684, # /sst/ui:s\N{LATIN SMALL LIGATURE ST}:y:$&:s\N{LATIN SMALL LIGATURE ST} => `/', match=
+    1685, # /sst/ui:s\N{LATIN SMALL LIGATURE LONG S T}:y:$&:s\N{LATIN SMALL LIGATURE LONG S T} => `/', match=
+    
+    # [perl #111400].  Tests the first Y/N boundary above 255 for each of these.
+    1699, # /[[:alnum:]]/:\x{2c1}:y:-:- => `-', match=
+    1701, # /[[:alpha:]]/:\x{2c1}:y:-:- => `-', match=
+    1703, # /[[:graph:]]/:\x{377}:y:-:- => `-', match=
+    1706, # /[[:lower:]]/:\x{101}:y:-:- => `-', match=
+    1708, # /[[:print:]]/:\x{377}:y:-:- => `-', match=
+    1711, # /[[:punct:]]/:\x{37E}:y:-:- => `-', match=
+    1713, # /[[:upper:]]/:\x{100}:y:-:- => `-', match=
+    1715, # /[[:word:]]/:\x{2c1}:y:-:- => `-', match=
+
+    # $^N, $+ on backtrackracking
+    # BRANCH
+    1739, # ^(.)(?:(..)|B)[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # TRIE
+    1741, # ^(.)(?:BC(.)|B)[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # CURLYX
+    1743, # ^(.)(?:(.)+)*[BX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # CURLYM
+    1746, # ^(.)(BC)*[BX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # CURLYN
+    1749, # ^(.)(B)*.[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+
+    # [perl #114220]
+    1793, # (utf8::upgrade($subject)) /[\H]/:\x{BF}:y:$&:\xBF => `�', match=1
+    1794, # (utf8::upgrade($subject)) /[\H]/:\x{A0}:n:-:- => false positive
+    1795, # (utf8::upgrade($subject)) /[\H]/:\x{A1}:y:$&:\xA1 => `�', match=1
+
+    # \W in pattern -> !UTF8: add UTF if subject is UTF8 [#15]
+    1804..1807, # \w:\x{200C}:y:$&:\x{200C} => `\', match=
+    #1805, # \W:\x{200C}:n:-:- => false positive
+    #1806, # \w:\x{200D}:y:$&:\x{200D} => `\', match=
+    #1807, # \W:\x{200D}:n:-:- => false positive
+    
+    # again missing UTF [#15]
+    1818..1820, # /^\D{11}/a:\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}:n:-:- => false positive
+    1823, # (utf8::upgrade($subject)) \Vn:\xFFn/:y:$&:\xFFn => `�n', match=1
+    1830, # a?\X:a\x{100}:y:$&:a\x{100} => `a�', match=1
+    1892, # /^\S+=/d:\x{3a3}=\x{3a0}:y:$&:\x{3a3}= => `Σ=', match=1
+    1893, # /^\S+=/u:\x{3a3}=\x{3a0}:y:$&:\x{3a3}= => `Σ=', match=1
+    1936, # /[a-z]/i:\N{KELVIN SIGN}:y:$&:\N{KELVIN SIGN} => `/', match=
+    1937, # /[A-Z]/ia:\N{KELVIN SIGN}:y:$&:\N{KELVIN SIGN} => `/', match=
+    1939, # /[A-Z]/i:\N{LATIN SMALL LETTER LONG S}:y:$&:\N{LATIN SMALL LETTER LONG S} => `/', match=
+    
+    1964, # \N(?#comment){SPACE}:A:c:-:Missing braces on \\N{} => `-', match=
     1983, # /(?xx:[a b])/x:\N{SPACE}:n:-:- => false positive
     1985, # /(?xx)[a b]/x:\N{SPACE}:n:-:- => false positive
+
+    # [perl #125825]
+    1945, # /(a+){1}+a/:aaa:n:-:- => false positive
+    
+    # [perl 128420] recursive matches
+    1976, # aa$|a(?R)a|a:aaa:y:$&:aaa => `a', match=1
   
   );
 
-# older perls:
-push @pcre_fail, (645, 651, 654, 664, 931, 1093..1096, 1099..1102,
-                1108..1111, 1114, 1116..1117, 1120..1121, 1277,
-                1279..1285, 1314, 1316, 1321..1322, 1326,
-                  1353, 1356) if $] < 5.014;
-push @pcre_fail, (546, 664) if "$]" =~ /^5\.01[46]/;
-push @pcre_fail, (621) if "$]" =~ /^5\.01[468]/;
-push @pcre_fail, (1939..1942, 1952..1954, 1958..1960, 1963..1966)
-                       if "$]" =~ /^5\.020/;
-push @pcre_fail, (1952..1954, 1958..1960)
-                       if "$]" =~ /^5\.022/;
-push @pcre_skip, 544 if $] >= 5.016 and $] < 5.022; # syntax error crashes
-push @pcre_skip, 1970..1986 if $] < 5.026; # crashes
-push @pcre_fail, 1969 if $] < 5.026; # fixed with 5.26 [perl 128420]
+# version-specifics, older perls:
+push @pcre_fail, (
+    554, 629, 653, 659, 662, 672, 939, 1101..1104,
+    1107..1110, 1116..1119, 1122, 1124..1125, 1128..1129,
+    1285, 1287..1293, 1322, 1324,
+    1329..1330, 1334, 1361, 1364,
+  ) if $] < 5.014;
+push @pcre_fail, (1638) if "$]" =~ /^5\.014/;
+push @pcre_fail, (554, 672, 1638) if "$]" =~ /^5\.01[46]/;
+push @pcre_fail, (629) if "$]" =~ /^5\.01[468]/;
+# codeblocks
+push @pcre_fail, (1770..1776, 1778, 1809) if "$]" =~ /^5\.01[6]/;
+push @pcre_fail, (1960..1962, 1966, 1987, 1989..1991)
+  if "$]" =~ /^5\.020/;
+push @pcre_fail, (1960..1962, 1966, 1987..1992, 1994, 1996)
+  if "$]" =~ /^5\.022/;
+# return in codeblock
+push @pcre_skip, (552,1753,1755,1758..1765)
+  if $] >= 5.016 and $] < 5.022; # syntax error crashes
+push @pcre_skip, (1383,1399,1410,1548..1572,1639,1792,1830)
+  if $] < 5.020; # Malformed UTF-8 character (fatal), group index overflow
+push @pcre_skip, (1981) if $] < 5.026; # crashes
+push @pcre_fail, 1976 if $] < 5.026; # fixed with 5.26 [perl 128420]
+my %skip_ver;
+$skip_ver{'5.015'} = 1684; # skip <=5.14 >= 1684
+$skip_ver{'5.021'} = 1896; # skip <=5.20 >= 1896
+$skip_ver{'5.026'} = 1981; # skip <=5.26 >= 1981
 @pcre_fail{@pcre_fail} = ();
 @pcre_skip{@pcre_skip} = ();
 
 TEST:
 foreach (@tests) {
     $test++;
-    if (!/\S/ || /^\s*#/) {
-        print "ok $test # (Blank line or comment)\n";
+    if (!/\S/ || /^\s*#/ || /^__END__$/) {
+        print "ok $test #SKIP (blank line or comment)\n";
         if (/\S/) { print $_ };
         next;
     }
@@ -283,23 +331,18 @@ foreach (@tests) {
     #    $pcre_fail{$test}++;
     #}
     if (exists $pcre_skip{$test}) {
-        print "ok $test # (skip, known to crash with this perl)\n";
+        print "ok $test #SKIP fatal with this perl\n";
         next;
     }
-    if ($test >= 1372 && $] < 5.020) {
-        print "ok $test # Test too new for $]\n";
-        $skip_rest = 1;
-        next;
+    for my $ver (sort keys %skip_ver) {
+        if ($test >= $skip_ver{$ver} && $] < $ver) {
+            print "ok $test #SKIP test too new for $]\n";
+            $skip_rest = 1;
+            next TEST;
+        }
     }
-    if ($test >= 1970 && $] < 5.026) {
-        print "ok $test # Test too new for $]\n";
-        $skip_rest = 1;
-        next;
-    }
-    $skip_rest = 1 if /^__END__$/;
-
     if ($skip_rest) {
-        print "ok $test # (skipping rest)\n";
+        print "ok $test #SKIP rest\n";
         next;
     }
     chomp;
@@ -342,7 +385,7 @@ foreach (@tests) {
     if ($result =~ s/p// or $todo) {
         $pcre_fail{$test}++;
     }
-    $todo = " # TODO" if !$todo and $pcre_fail{$test};
+    $todo = " # TODO" if !$todo or $pcre_fail{$test};
     my $testname= $test;
     if ($comment) {
         $comment=~s/^\s*(?:#\s*)?//;

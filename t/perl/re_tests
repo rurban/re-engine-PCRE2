@@ -1,4 +1,12 @@
+# This stops me getting screenfulls of syntax errors every time I accidentally
+# run this file via a shell glob.  The full format of this file is given
+# in regexp.t
+# Prior to the implementation of autoloading of \N{}, tests that used \N{name}
+# could not go in this file, and were farmed out to other .t's, where they
+# remain
+#
 # pat	string	y/n/etc	expr	expected-expr	skip-reason	comment
+__END__
 abc	abc	y	$&	abc
 abc	abc	y	$-[0]	0
 abc	abc	y	$+[0]	3
@@ -1372,7 +1380,7 @@ foo(\R+)bar	foo\r\n\x{85}\r\n\nbar	yp	$1	\r\n\x{85}\r\n\n
 (\R+)(\V)	foo\r\n\x{85}\r\n\nbar	yp	$1-$2	\r\n\x{85}\r\n\n-b
 foo(\R)bar	foo\x{85}bar	yp	$1	\x{85}
 (\V)(\R)	foo\x{85}bar	yp	$1-$2	o-\x{85}
-(\R)(\V)	foo\x{85}bar	y	$1-$2	\x{85}-b
+(\R)(\V)	foo\x{85}bar	y	$1-$2	\x{85}-b	# Invalid <5.20
 foo(\R)bar	foo\r\nbar	y	$1	\r\n
 (\V)(\R)	foo\r\nbar	y	$1-$2	o-\r\n
 (\R)(\V)	foo\r\nbar	y	$1-$2	\r\n-b
@@ -1388,7 +1396,7 @@ foo(\v+)bar	foo\r\n\x{85}\r\n\nbar	yp	$1	\r\n\x{85}\r\n\n
 (\v+)(\V)	foo\r\n\x{85}\r\n\nbar	yp	$1-$2	\r\n\x{85}\r\n\n-b
 foo(\v)bar	foo\x{85}bar	yp	$1	\x{85}
 (\V)(\v)	foo\x{85}bar	yp	$1-$2	o-\x{85}
-(\v)(\V)	foo\x{85}bar	y	$1-$2	\x{85}-b
+(\v)(\V)	foo\x{85}bar	y	$1-$2	\x{85}-b	# Invalid <5.20
 foo(\v)bar	foo\rbar	y	$1	\r
 (\V)(\v)	foo\rbar	y	$1-$2	o-\r
 (\v)(\V)	foo\rbar	y	$1-$2	\r-b
@@ -1399,7 +1407,7 @@ foo(\h+)bar	foo\t\x{A0}bar	yp	$1	\t\x{A0}
 (\h+)(\H)	foo\t\x{A0}bar	yp	$1-$2	\t\x{A0}-b
 foo(\h)bar	foo\x{A0}bar	yp	$1	\x{A0}
 (\H)(\h)	foo\x{A0}bar	yp	$1-$2	o-\x{A0}
-(\h)(\H)	foo\x{A0}bar	y	$1-$2	\x{A0}-b
+(\h)(\H)	foo\x{A0}bar	y	$1-$2	\x{A0}-b	# Invalid <5.20
 foo(\h)bar	foo\tbar	y	$1	\t
 (\H)(\h)	foo\tbar	y	$1-$2	o-\t
 (\h)(\H)	foo\tbar	y	$1-$2	\t-b
@@ -1537,10 +1545,10 @@ a(.)\g4294967296}	x	c	-	Reference to nonexistent group in regex
 a(.)\g4294967297}	x	c	-	Reference to nonexistent group in regex
 a(.)\g4294967298}	x	c	-	Reference to nonexistent group in regex
 
-(.)\g{2147483648}	x	c	-	Reference to nonexistent group in regex
-(.)\g{2147483649}	x	c	-	Reference to nonexistent group in regex
-(.)\g{2147483650}	x	c	-	Reference to nonexistent group in regex
-(.)\g{4294967296}	x	c	-	Reference to nonexistent group in regex
+(.)\g{2147483648}	x	c	-	Reference to nonexistent group in regex		# Invalid <5.20
+(.)\g{2147483649}	x	c	-	Reference to nonexistent group in regex		# Invalid <5.20
+(.)\g{2147483650}	x	c	-	Reference to nonexistent group in regex		# Invalid <5.20
+(.)\g{4294967296}	x	c	-	Reference to nonexistent group in regex		# Invalid <5.20
 (.)\g{4294967297}	x	c	-	Reference to nonexistent group in regex
 (.)\g{4294967298}	x	c	-	Reference to nonexistent group in regex
 a(.)\g{2147483648}	x	c	-	Reference to nonexistent group in regex
@@ -1812,14 +1820,14 @@ ab[c\\\](??{"x"})]{3}d	ab\\](d	y	-	-
 /^\W{11}/a	\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}	np	-	-
 
 # [ perl #114272]
-\Vn	\xFFn/	yp	$&	\xFFn
+\Vn	\xFFn/	yp	$&	\xFFn		# Missing UTF #15
 
 # These mostly exercize various paths in the optimizer
 /(?l:a?\w)/	b	y	$&	b
 /(?l:a?\D)/	b	y	$&	b
 ^_?[^\S_0-9]\w*\z	\t	y	$&	\t
 m?^xy\?$?	xy?	y	$&	xy?
-a?\X	a\x{100}	yp	$&	a\x{100}
+a?\X	a\x{100}	yp	$&	a\x{100}	# Missing UTF #15
 a?\R	a\n	y	$&	a\n
 ^a?\N$	a\n	y	$&	a
 \N?a	\na	y	$&	a
@@ -1881,10 +1889,10 @@ A+(*PRUNE)BC(?{})	AAABC	y	$&	AAABC
 (?<W>a)(?<BB>(?=(?&W))(?<=(?&W)))(?&BB)	aa	y	$&	a	# test repeated recursive patterns
 
 # This group is from RT #121144
-/^\S+=/d	\x{3a3}=\x{3a0}	yp	$&	\x{3a3}=
-/^\S+=/u	\x{3a3}=\x{3a0}	yp	$&	\x{3a3}=
+/^\S+=/d	\x{3a3}=\x{3a0}	yp	$&	\x{3a3}=	# Missing UTF #15
+/^\S+=/u	\x{3a3}=\x{3a0}	yp	$&	\x{3a3}=	# Missing UTF #15
 
-# utf8 cache length panics
+# utf8 cache length panics. Illegal before 5.20
 \x{100}[xy]\x{100}{2}	\x{100}y\x{100}\x{100}	y	$&	\x{100}y\x{100}\x{100}
 \x{100}a{2,3}	\x{100}aaa	y	$&	\x{100}aaa
 ^x?abc?de	abcde	y	$&	abcde
@@ -1955,7 +1963,7 @@ A(*FAIL:foo)[BC]	A	n	$::REGERROR	foo
 
 \N(?#comment){SPACE}	A	cp	-	Missing braces on \\N{}
 ab(?#Comment){2}c	abbc	y	$&	abbc
-\p A	A	c	-	Character following \\p must be '{' or a single-character Unicode property name		# [perl #126187
+\p A	A	c	-	Character following \\p must be '{' or a single-character Unicode property name
 \P:A	A	c	-	Character following \\P must be '{' or a single-character Unicode property name
 \p^	A	c	-	Character following \\p must be '{' or a single-character Unicode property name
 \PU	A	c	-	Can't find Unicode property definition \"U\"
@@ -1968,6 +1976,8 @@ ab(?#Comment){2}c	abbc	y	$&	abbc
 aa$|a(?R)a|a	aaa	yp	$&	aaa		# [perl 128420] recursive matches
 (?:\1|a)([bcd])\1(?:(?R)|e)\1	abbaccaddedcb	y	$&	abbaccaddedcb		# [perl 128420] recursive match with backreferences
 AB\s+\x{100}	AB \x{100}X	y	-	-
+
+# illegal tests, crashing/failing before 5.26
 \b\z0*\x{100}	.\x{100}	n	-	-	# [perl #129350] crashed in intuit_start
 (.*?(a(a)|i(i))n)	riiaan	y	$2-$3-$4-$1	aa-a--riiaan		#  Jump trie capture buffer issue [perl #129897]
 (^(?:(\d)x)?\d$)	1	y	[$1-$2]	[1-]		#  make sure that we reset capture buffers properly (from regtry)
