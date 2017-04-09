@@ -12,6 +12,9 @@
 #ifndef strEQc
 # define strEQc(s, c) strEQ(s, ("" c ""))
 #endif
+#ifndef PERL_STATIC_INLINE
+# define PERL_STATIC_INLINE static
+#endif
 
 static char retbuf[64];
 
@@ -657,18 +660,28 @@ PCRE2_JIT(...)
 PROTOTYPE:
 PPCODE:
     uint32_t jit;
-    pcre2_config(PCRE2_CONFIG_JIT, &jit);
+    if (pcre2_config(PCRE2_CONFIG_JIT, &jit) < 0)
+        XSRETURN_UNDEF;
     mXPUSHi(jit ? 1 : 0);
+    XSRETURN(1);
 
 #define RET_STR(name) \
     if (strEQc(opt, #name)) { \
-        if (pcre2_config(PCRE2_CONFIG_##name, &retbuf) >= 0) \
+        if (pcre2_config(PCRE2_CONFIG_##name, &retbuf) >= 0) { \
             mXPUSHp(retbuf, strlen(retbuf)); \
+        } else {                             \
+            XSRETURN_UNDEF;                  \
+        }                                    \
+        XSRETURN(1);                         \
     }
 #define RET_INT(name) \
     if (strEQc(opt, #name)) { \
-        if (pcre2_config(PCRE2_CONFIG_##name, &retint) >= 0) \
-            mXPUSHi(retint); \
+        if (pcre2_config(PCRE2_CONFIG_##name, &retint) >= 0) {   \
+            mXPUSHi(retint);                \
+        } else {                            \
+            XSRETURN_UNDEF;                 \
+        }                                   \
+        XSRETURN(1);                        \
     }
 
 void
@@ -685,9 +698,18 @@ PPCODE:
     RET_INT(MATCHLIMIT) else
     RET_INT(NEWLINE) else
     RET_INT(PARENSLIMIT) else
+    RET_INT(UNICODE)
 #ifdef PCRE2_CONFIG_DEPTHLIMIT
     RET_INT(DEPTHLIMIT) else
+#else
+    if (strEQc(opt, "DEPTHLIMIT")) {
+        XSRETURN_UNDEF;
+    }
 #endif
-    RET_INT(RECURSIONLIMIT) else
-    RET_INT(STACKRECURSE) else
-    RET_INT(UNICODE)
+#ifdef PCRE2_CONFIG_RECURSIONLIMIT
+    RET_INT(RECURSIONLIMIT) else /* Obsolete synonym */
+#endif
+#ifdef PCRE2_CONFIG_STACKRECURSE
+    RET_INT(STACKRECURSE) else   /* Obsolete. Always 0 in newer libs */
+#endif
+    Perl_croak(aTHX_ "Invalid config argument %s", opt);

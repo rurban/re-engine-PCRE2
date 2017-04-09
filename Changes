@@ -2,6 +2,7 @@ Revision history for re::engine::PCRE2
 
 0.07
 
+    - Fix XS stack in case of config() errors
     - Prepare for compile and match contexts (import options)
     - Simplify XS method implementation
     - Add config and method tests

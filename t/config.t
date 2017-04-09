@@ -4,7 +4,6 @@ use Config;
 use re::engine::PCRE2;
 
 my $qr = qr/(a(b?))/;
-my $bit64 = $Config{ptrsize} == 8 ? 1 : 0;
 my %m =
   (
    _alloptions => 64,
@@ -34,9 +33,9 @@ my %o =
    MATCHLIMIT => 10000000,
    NEWLINE => 2,
    PARENSLIMIT => 250,
-   DEPTHLIMIT => $bit64 ? 10000000 : undef,
    RECURSIONLIMIT => 10000000,
-   STACKRECURSE => $bit64 ? 1 : 0,
+   #DEPTHLIMIT => 10000000 or undef,
+   #STACKRECURSE => 1 or 0 in newer libs, obsolete
    UNICODE => 1,
   );
 
@@ -56,10 +55,16 @@ if (re::engine::PCRE2::JIT) {
   is($s, undef, "no config JITTARGET");
 }
 
-is(re::engine::PCRE2::config('invalid'), undef, "config invalid");
+eval { $s = re::engine::PCRE2::config('invalid'); };
+# note: $s stays at JITTARGET. XS returns empty
+like($@, qr/^Invalid config argument invalid/, "config invalid");
 for (sort keys %o) {
   is(re::engine::PCRE2::config($_), $o{$_}, "config $_ $o{$_}");
 }
+$s = re::engine::PCRE2::config("DEPTHLIMIT");
+ok(!defined $s || $s == 10000000, "config DEPTHLIMIT $s");
+$s = re::engine::PCRE2::config("STACKRECURSE");
+ok($s == 0 || $s == 1, "config STACKRECURSE $s");
 $s = re::engine::PCRE2::config("UNICODE_VERSION");
 like($s, qr/^\d/, "config UNICODE_VERSION \"$s\"");
 $s = re::engine::PCRE2::config("VERSION");

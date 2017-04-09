@@ -293,12 +293,14 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
         MATCHLIMIT
         NEWLINE
         PARENSLIMIT
-        DEPTHLIMIT
-        RECURSIONLIMIT
-        STACKRECURSE
+        DEPTHLIMIT      (Not always defined)
+        RECURSIONLIMIT  (Obsolete synonym for DEPTHLIMIT)
+        STACKRECURSE    (Obsolete. Always 0 in newer libs)
         UNICODE
 
     The first three options return a string, the rest an integer.
+    In case of internal errors, e.g. the new option is not yet supported by libpcre,
+    undef is returned.
     See [http://www.pcre.org/current/doc/html/pcre2api.html#SEC17](http://www.pcre.org/current/doc/html/pcre2api.html#SEC17).
 
     NEWLINE returns an integer, representing:
