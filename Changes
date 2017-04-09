@@ -1,5 +1,9 @@
 Revision history for re::engine::PCRE2
 
+0.06 Sun Apr 9 11:25:35 2017 +0200 rurban
+
+    - Add BENCHMARKS to documentation: 40% faster
+
 0.05 Sun Apr 9 10:48:20 2017 +0200 rurban
 
     - Harmonize re_tests with core, add version specifics

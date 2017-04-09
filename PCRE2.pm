@@ -1,7 +1,7 @@
 package re::engine::PCRE2;
 our ($VERSION, $XS_VERSION);
 BEGIN {
-  $VERSION = '0.05';
+  $VERSION = '0.06';
   $XS_VERSION = $VERSION;
   $VERSION = eval $VERSION;
 }
@@ -369,6 +369,18 @@ The default is 1 for UNICODE, as all libpcre2 libraries are now compiled
 with unicode support builtin. (C<--enable-unicode>).
 
 =back
+
+=head1 BENCHMARKS
+
+    time perl5.24.1 -Mblib t/perl/regexp.t 10000 >/dev/null
+
+Without PCRE2:
+
+    32.572s
+
+With PCRE2:
+
+    19.596s - 40% faster
 
 =head1 FAILING TESTS
 

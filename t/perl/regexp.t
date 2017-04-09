@@ -91,7 +91,7 @@ use strict;
 use warnings FATAL=>"all";
 use vars qw($iters $numtests $bang $ffff $nulnul $OP);
 use vars qw($skip_amp $qr $qr_embed); # set by our callers
-use re::engine::PCRE2 ();
+use re::engine::PCRE2 ();  # simply disable for benchmarks and regression tests
 use re 'eval';
 use Data::Dumper;
 
