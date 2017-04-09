@@ -315,12 +315,17 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         /*pcre2_set_match_limit(match_context, 5120000000);*/
         /*pcre2_jit_stack_assign(match_context, NULL, get_jit_stack());*/
 #endif
+        /* Masks for identifying the public options that are permitted at match time. */
+#define PUBLIC_JIT_MATCH_OPTIONS \
+   (PCRE2_NO_UTF_CHECK|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY|\
+    PCRE2_NOTEMPTY_ATSTART|PCRE2_PARTIAL_SOFT|PCRE2_PARTIAL_HARD)
+
         rc = (I32)pcre2_jit_match(
             ri,
             (PCRE2_SPTR8)stringarg,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
-            re->intflags,         /* the options (again) */
+            re->intflags & PUBLIC_JIT_MATCH_OPTIONS,
             match_data,           /* block for storing the result */
 #ifdef USE_MATCH_CONTEXT
             match_context
@@ -329,12 +334,18 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 #endif
         );
     } else {
+
+#define PUBLIC_MATCH_OPTIONS                                            \
+  (PCRE2_ANCHORED|PCRE2_ENDANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
+   PCRE2_NOTEMPTY_ATSTART|PCRE2_NO_UTF_CHECK|PCRE2_PARTIAL_HARD| \
+   PCRE2_PARTIAL_SOFT|PCRE2_NO_JIT)
+
         rc = (I32)pcre2_match(
             ri,
             (PCRE2_SPTR8)stringarg,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
-            re->intflags & PCRE2_UTF, /* some options */
+            re->intflags & PUBLIC_MATCH_OPTIONS,
             match_data,           /* block for storing the result */
 #ifdef USE_MATCH_CONTEXT
             match_context

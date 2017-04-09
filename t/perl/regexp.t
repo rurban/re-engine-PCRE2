@@ -342,11 +342,11 @@ push @pcre_skip, (552,1753,1755,1758..1765)
 push @pcre_skip, (1383,1399,1410,1548..1572,1639,1792,1830)
   if $] < 5.020; # Malformed UTF-8 character (fatal), group index overflow
 push @pcre_skip, (1981) if $] < 5.026; # crashes
-push @pcre_fail, 1976 if $] < 5.026; # fixed with 5.26 [perl 128420]
+push @pcre_fail, (1976) if $] < 5.026; # fixed with 5.26 [perl 128420]
 my %skip_ver;
-$skip_ver{'5.015'} = 1684; # skip <=5.14 >= 1684
-$skip_ver{'5.021'} = 1896; # skip <=5.20 >= 1896
-$skip_ver{'5.026'} = 1981; # skip <=5.26 >= 1981
+$skip_ver{'5.015'} = 1684; # skip < 5.14, >= 1684
+$skip_ver{'5.021'} = 1896; # skip < 5.20, >= 1896
+$skip_ver{'5.026'} = 1981; # skip < 5.26, >= 1981
 @pcre_fail{@pcre_fail} = ();
 @pcre_skip{@pcre_skip} = ();
 
@@ -354,7 +354,7 @@ TEST:
 foreach (@tests) {
     $test++;
     if (!/\S/ || /^\s*#/ || /^__END__$/) {
-        print "ok $test #SKIP (blank line or comment)\n";
+        print "ok $test #skip (blank line or comment)\n";
         if (/\S/) { print $_ };
         next;
     }
