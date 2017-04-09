@@ -42,16 +42,20 @@ my %o =
 for (sort keys %m) {
   is($qr->$_, $m{$_}, "$_ $m{$_}");
 }
-ok($qr->size > 100, "size"); # 131 with 32bit, 155 with 64bit
+my $s = $qr->size;
+ok($s > 100, "size $s"); # 131 with 32bit, 155 with 64bit
 
-my $s = re::engine::PCRE2::config('JITTARGET');
 if (re::engine::PCRE2::JIT) {
-  ok($qr->jitsize > 20, "jitsize");
-  is(re::engine::PCRE2::config('JIT'), 1, "config JIT");
+  $s = $qr->jitsize;
+  ok($s > 20, "jitsize $s");
+  is(re::engine::PCRE2::config('JIT'), 1, "config JIT 1");
+  $s = re::engine::PCRE2::config('JITTARGET');
   ok($s, "config JITTARGET \"$s\"");
 } else {
-  is($qr->jitsize, 0, "no jitsize");
-  is(re::engine::PCRE2::config('JIT'), 0, "config JIT");
+  $s = $qr->jitsize;
+  is($s, 0, "no jitsize 0");
+  is(re::engine::PCRE2::config('JIT'), 0, "config JIT 0");
+  $s = re::engine::PCRE2::config('JITTARGET');
   is($s, undef, "no config JITTARGET");
 }
 

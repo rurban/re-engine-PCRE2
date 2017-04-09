@@ -635,8 +635,9 @@ PPCODE:
     regexp *re = RegSV(rx);
     pcre2_code *ri = (pcre2_code *)re->pprivate;
     pcre2_pattern_info(ri, PCRE2_INFO_NAMETABLE, &RETVAL);
-    if (table)
+    if (table) {
         mXPUSHp(table, strlen(table));
+    }
 
 #endif
 
