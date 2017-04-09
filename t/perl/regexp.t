@@ -18,13 +18,14 @@ use Test::More;
 # 	c	expect an error
 #	B	test exposes a known bug in Perl, should be skipped
 #	b	test exposes a known bug in Perl, should be skipped if noamp
-#	T	the test is a TODO (can be combined with y/n/c)
+#	T	the test is a TODO (can be combined with y/n/c/p)
 #	M	skip test on miniperl (combine with y/n/c/T)
 #	t	test exposes a bug with threading, TODO if qr_embed_thr
 #       s       test should only be run for regex_sets_compat.t
 #       S       test should not be run for regex_sets_compat.t
 #       a       test should only be run on ASCII platforms
 #       e       test should only be run on EBCDIC platforms
+#       p       exposes a PCRE bug/limitation. TODO
 #
 # Columns 4 and 5 are used only if column 3 contains C<y> or C<c>.
 #
@@ -115,8 +116,9 @@ my $skip_rest;
 
 
 # Tests known to fail under PCRE2
-my (%pcre_fail, @pcre_skip, %pcre_skip);
-my @pcre_fail = (
+my (@pcre_fail, %pcre_fail, @pcre_skip, %pcre_skip);
+# see p in re_tests instead
+my @pcre_fail_ignored = (
 
     # new patterns and pcre2 fails: need to fallback
     135..138, # \B{gcb} \B{lb} \B{sb} \B{wb}
@@ -154,13 +156,15 @@ my @pcre_fail = (
     #1253,
     # These cause utf8 warnings, see above
     #1307, 1309, 1310, 1311, 1312, 1318, 1320 .. 1323,
-    
-    #892, # ([a-\d]+):-:sc:-:False [] range => `-', match=1
-    #894, # ([\d-z]+):-:sc:$1:False [] range => `-', match=1
-    #896, # ([\d-\s]+):-:sc:$1:False [] range => `-', match=1
-    #898, # ([a-[:digit:]]+):-:sc:-:False [] range => `-', match=1
-    #900, # ([[:digit:]-z]+):-:sc:c:False [] range => `c', match=1
-    #902, # ([[:digit:]-[:alpha:]]+):-:sc:-:False [] range => `-', match=1
+
+    # test errors:    
+    892, # ([a-\d]+):-:c:-:False [] range => `-', match=1
+    894, # ([\d-z]+):-:cc:$1:False [] range => `-', match=1
+    896, # ([\d-\s]+):-:cc:$1:False [] range => `-', match=1
+    898, # ([a-[:digit:]]+):-:cc:-:False [] range => `-', match=1
+    900, # ([[:digit:]-z]+):-:cc:c:False [] range => `c', match=1
+    902, # ([[:digit:]-[:alpha:]]+):-:c:-:False [] range => `-', match=1
+
     933, # ^(a(b)?)+$:aba:y:-$1-$2-:-a-- => `-a-b-', match=1
     934, # ^(aa(bb)?)+$:aabbaa:y:-$1-$2-:-aa-- => `-aa-bb-', match=1
     939, # ^(a\1?){4}$:aaaaaa:y:$1:aa => `', match=
@@ -261,6 +265,7 @@ push @pcre_fail, (1952..1954, 1958..1960)
                        if "$]" =~ /^5\.022/;
 push @pcre_skip, 544 if $] >= 5.016 and $] < 5.022; # syntax error crashes
 push @pcre_skip, 1970..1986 if $] < 5.026; # crashes
+push @pcre_fail, 1969 if $] < 5.026; # fixed with 5.26 [perl 128420]
 @pcre_fail{@pcre_fail} = ();
 @pcre_skip{@pcre_skip} = ();
 
@@ -330,11 +335,14 @@ foreach (@tests) {
         $skip++;
         $reason = "Test is only valid for EBCDIC platforms.  $reason";
     }
-    $reason = 'skipping $&' if $reason eq  '' && $skip_amp;
+    $reason = 'skipping $&' if $reason eq '' && $skip_amp;
     $result =~ s/B//i unless $skip;
 
     my $todo= $result =~ s/T// ? " # TODO" : "";
-    $pcre_fail{$test}++ if $todo;
+    if ($result =~ s/p// or $todo) {
+        $pcre_fail{$test}++;
+    }
+    $todo = " # TODO" if !$todo and $pcre_fail{$test};
     my $testname= $test;
     if ($comment) {
         $comment=~s/^\s*(?:#\s*)?//;
@@ -386,8 +394,8 @@ EOFCODE
 	chomp( my $err = $@ );
 	if ($result =~ /c/) {
 	    if ($err !~ m!^\Q$expect!) {
-                my %remaining_errors = (1459=>1,1462=>1,1471=>1,1472=>1,1473=>1);
-                $todo = $remaining_errors{$test} ? " # TODO" : $todo;
+                # TODO: 6 wrong tests with expecting 'False [] range'
+                # Also broken upstream in perl5.
                 print "not ok $testname$todo (compile) $input => '$err'\n"; next TEST
             }
 	    last;  # no need to study a syntax error
