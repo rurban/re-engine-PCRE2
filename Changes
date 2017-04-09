@@ -1,5 +1,12 @@
 Revision history for re::engine::PCRE2
 
+0.05 Sun Apr 9 10:48:20 2017 +0200 rurban
+
+    - Harmonize re_tests with core, add version specifics
+    - Document failing tests, with PCRE2 vs older perls.
+      It's about the same, when the biggest problem, no utf8 patterns
+      with utf8 subjects is fixed. Arguably PCRE2 is even better.
+
 0.04 Fri Apr 7 19:57:46 2017 +0200 rurban
 
     - add META_MERGE resources, esp. for the bugtracker

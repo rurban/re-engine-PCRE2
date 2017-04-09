@@ -1,7 +1,7 @@
 package re::engine::PCRE2;
 our ($VERSION, $XS_VERSION);
 BEGIN {
-  $VERSION = '0.04';
+  $VERSION = '0.05';
   $XS_VERSION = $VERSION;
   $VERSION = eval $VERSION;
 }
@@ -23,7 +23,7 @@ our @CONTEXT_OPTIONS = qw(
 );
 
 # TODO: set context options, and save prev. ones for unimport.
-# compile-ctx and match-ctx
+# compile-ctx and match-ctx (see above: @CONTEXT_OPTIONS)
 sub import {
   $^H{regcomp} = ENGINE;
 }
@@ -374,6 +374,9 @@ with unicode support builtin. (C<--enable-unicode>).
 
 About 90% of all core tests and cpan modules do work with re::engine::PCRE2
 already, but there are still some unresolved problems.
+Esp. when the pattern is not detectable or marked as UTF-8 but the subject is,
+the match will be performed without UTF-8.
+
 Try the new faster matcher with C<export PERL5OPT=-Mre::engine::PCRE2>.
 
 Known problematic popular modules are: Test-Harness-3.38,
@@ -384,56 +387,172 @@ I<(local charset)>, Module-Install-1.18 I<unrecognized character after
 (?  or (?->, Text-CSV_XS-1.28 I<(unicode)>, YAML-Syck-1.29, MD5-2.03,
 XML-Parser-2.44, Module-Build-0.4222, libwww-perl-6.25.
 
-As of 0.04 the following core regression tests still fail:
+As of 0.05 the following core regression tests still fail:
 
     perl -C -Mblib t/perl/regexp.t | grep -a TODO
 
-    301: '^'i:ABC:y:$&: => `'', match=
-    353: '(a+|b){0,1}?'i:AB:y:$&-$1:- => `A-A', match=1
-    357: 'a*'i::y:$&: => `'', match=
-    497: a(?{"{"})b:-:c:-:Sequence (?{...}) not terminated or not {}-balanced => `-', match=
-    589:(utf8::upgrade($subject)) ([[:^alnum:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:__--  ${nulnul}${ffff} => `__--  \0\0Ã¿Ã¿', match=1
-    590:(utf8::upgrade($subject)) ([[:^ascii:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:${ffff} => `Ã¿Ã¿', match=1
-    594:(utf8::upgrade($subject)) ([[:^print:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:${nulnul}${ffff} => `\0\0Ã¿Ã¿', match=1
-    597:(utf8::upgrade($subject)) ([[:^word:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:--  ${nulnul}${ffff} => `--  \0\0Ã¿Ã¿', match=1
-    599:(utf8::upgrade($subject)) ([[:^xdigit:]]+):ABcd01Xy__--  ${nulnul}${ffff}:y:$1:Xy__--  ${nulnul}${ffff} => `Xy__--  \0\0Ã¿Ã¿', match=1
-    606: a{37,17}:-:c:-:Can't do {n,m} with n > m => `-', match=
-    813:.X(.+)+X:bbbbXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    814:.X(.+)+XX:bbbbXcXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    815:.XX(.+)+X:bbbbXXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    816:.X(.+)+X:bbbbXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    817:.X(.+)+XX:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    818:.XX(.+)+X:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    819:.X(.+)+[X]:bbbbXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    820:.X(.+)+[X][X]:bbbbXcXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    821:.XX(.+)+[X]:bbbbXXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    822:.X(.+)+[X]:bbbbXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    823:.X(.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    824:.XX(.+)+[X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    825:.[X](.+)+[X]:bbbbXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    826:.[X](.+)+[X][X]:bbbbXcXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    827:.[X][X](.+)+[X]:bbbbXXcXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:y:-:- => error `PCRE2 error -47'
-    828:.[X](.+)+[X]:bbbbXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    829:.[X](.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    830:.[X][X](.+)+[X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:n:-:- => error `PCRE2 error -47'
-    867: ^(a(b)?)+$:aba:y:-$1-$2-:-a-- => `-a-b-', match=1
-    868: ^(aa(bb)?)+$:aabbaa:y:-$1-$2-:-aa-- => `-aa-bb-', match=1
-    873: ^(a\1?){4}$:aaaaaa:y:$1:aa => `', match=
-    931:(??{}):x:y:-:- => error `Eval-group not allowed at runtime, use re 'eval' in regex m/(??{})/ at (eval 5345) line 2.'
-    1021: ^(<(?:[^<>]+|(?3)|(?1))*>)()(!>!>!>)$:<<!>!>!>><>>!>!>!>:y:$1:<<!>!>!>><>> => `', match=
-    1051: /^(?'main'<(?:[^<>]+|(?&crap)|(?&main))*>)(?'empty')(?'crap'!>!>!>)$/:<<!>!>!>><>>!>!>!>:y:$+{main}:<<!>!>!>><>> => `', match=
-    1291:(utf8::upgrade($subject)) foo(\R+)bar:foo\r
-    1293:(utf8::upgrade($subject)) (\R+)(\V):foo\r
-    1294:(utf8::upgrade($subject)) foo(\R)bar:foo\x{85}bar:y:$1:\x{85} => `', match=
-    1295:(utf8::upgrade($subject)) (\V)(\R):foo\x{85}bar:y:$1-$2:o-\x{85} => `Â-', match=1
-    1307:(utf8::upgrade($subject)) foo(\v+)bar:foo\r
-    1309:(utf8::upgrade($subject)) (\v+)(\V):foo\r
-    1310:(utf8::upgrade($subject)) foo(\v)bar:foo\x{85}bar:y:$1:\x{85} => `', match=
-    1311:(utf8::upgrade($subject)) (\V)(\v):foo\x{85}bar:y:$1-$2:o-\x{85} => `Â-', match=1
-    1318:(utf8::upgrade($subject)) foo(\h+)bar:foo\t\x{A0}bar:y:$1:\t\x{A0} => `', match=
-    1320:(utf8::upgrade($subject)) (\h+)(\H):foo\t\x{A0}bar:y:$1-$2:\t\x{A0}-b => `	-Â', match=1
-    1321:(utf8::upgrade($subject)) foo(\h)bar:foo\x{A0}bar:y:$1:\x{A0} => `', match=
-    1322:(utf8::upgrade($subject)) (\H)(\h):foo\x{A0}bar:y:$1-$2:o-\x{A0} => `Â- ', match=1
+    # new patterns and pcre2 fails: need to fallback
+    143..146, # \B{gcb} \B{lb} \B{sb} \B{wb}
+    352,      # '^'i:ABC:y:$&:
+    402,      # '(a+|b){0,1}?'i
+    409,      # 'a*'i $&
+    578,      # '(b.)c(?!\N)'s:a
+    654,655,664, # unicode
+    667,      # '[[:^cntrl:]]+'u:a\x80:y:$&:a
+
+    # Pathological patterns that run into run-time PCRE_ERROR_MATCHLIMIT,
+    # even with huge set_match_limit 512mill
+    880 .. 897, # .X(.+)+[X][X]:bbbbXXXaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+    # aba =~ ^(a(b)?)+$ and aabbaa =~ ^(aa(bb)?)+$
+    941, # ^(a(b)?)+$:aba:y:-$1-$2-:-a-- => `-a-b-', match=1
+    942, # ^(aa(bb)?)+$:aabbaa:y:-$1-$2-:-aa-- => `-aa-bb-', match=1
+    947, # ^(a\1?){4}$:aaaaaa:y:$1:aa => `', match=
+
+    # empty codeblock
+    1005, #TODO (??{}):x:y:-:- => error `Eval-group not allowed at runtime, use re 'eval' in regex m/(??{})/ at (eval 5663) line 1.'
+
+    # XXX: <<<>>> pattern
+    1096, # ^(<(?:[^<>]+|(?3)|(?1))*>)()(!>!>!>)$:<<!>!>!>><>>!>!>!>:y:$1:<<!>!>!>><>> => `', match=
+    1126, # /^(?'main'<(?:[^<>]+|(?&crap)|(?&main))*>)(?'empty')(?'crap'!>!>!>)$/:<<!>!>!>><>>!>!>!>:yM:$+{main}:<<!>!>!>><>> => `', match=
+
+    # XXX: \R doesn't match an utf8::upgraded \x{85}, we need to
+    # always convert the subject and pattern to utf-8 for these cases
+    # to work
+    1378, # (utf8::upgrade($subject)) foo(\R+)bar:foo\r
+    1380, # (utf8::upgrade($subject)) (\R+)(\V):foo\r
+    1381, # (utf8::upgrade($subject)) foo(\R)bar:foo\x{85}bar:y:$1:\x{85} => `', match=
+    1382, # (utf8::upgrade($subject)) (\V)(\R):foo\x{85}bar:y:$1-$2:o-\x{85} => `�-�', match=1
+    1394, # (utf8::upgrade($subject)) foo(\v+)bar:foo\r
+    1396..1398, # (utf8::upgrade($subject)) (\v+)(\V):foo\r
+    1405,1407..1409, # (utf8::upgrade($subject)) foo(\h+)bar:foo\t\x{A0}bar:y:$1:\t\x{A0} => `', match=
+
+    # regressions in 5.8.x (only) introduced by change 30638
+    1433, # /^\s*i.*?o\s*$/s:io
+    
+    1446, #/\N{}\xe4/i:\xc4:y:$&:\xc4 => error `Unknown charname '' is deprecated. Its use will be fatal in Perl 5.28 at (eval 7892) line 2.'
+    1484, # /abc\N {U+41}/x:-:c:-:Missing braces => `-', match=
+    1485, # /abc\N {SPACE}/x:-:c:-:Missing braces => `-', match=
+    1490, # /\N{U+BEEF.BEAD}/:-:c:-: => `-', match=
+    
+    1495, # \c`:-:ac:-:\"\\c`\" is more clearly written simply as \"\\ \" => `-', match=
+    1496, # \c1:-:ac:-:\"\\c1\" is more clearly written simply as \"q\" => `-', match=
+    
+    1514, # \c?:\x9F:ey:$&:\x9F => `\', match=
+    
+    1575, # [\8\9]:\000:Sn:-:- => `-', match=
+    1576, # [\8\9]:-:sc:$&:Unrecognized escape \\8 in character class => `[', match=
+    
+    1582, # [\0]:-:sc:-:Need exactly 3 octal digits => `-', match=
+    1584, # [\07]:-:sc:-:Need exactly 3 octal digits => `-', match=
+    1585, # [\07]:7\000:Sn:-:- => `-', match=
+    1586, # [\07]:-:sc:-:Need exactly 3 octal digits => `-', match=
+    
+    1599, # /\xe0\pL/i:\xc0a:y:$&:\xc0a => `/', match=
+    
+    1618, # ^_?[^\W_0-9]\w\z:\xAA\x{100}:y:$&:\xAA\x{100} => `^', match=
+    1621, # /s/ai:\x{17F}:y:$&:\x{17F} => `/', match=
+    
+    1630, # /[^\x{1E9E}]/i:\x{DF}:Sn:-:- => `-', match=
+    1639, # /^\p{L}/:\x{3400}:y:$&:\x{3400} => `�', match=1
+    1642, # /[s\xDF]a/ui:ssa:Sy:$&:ssa => `sa', match=1
+    
+    1648, # /ff/i:\x{FB00}\x{FB01}:y:$&:\x{FB00} => `/', match=
+    1649, # /ff/i:\x{FB01}\x{FB00}:y:$&:\x{FB00} => `/', match=
+    1650, # /fi/i:\x{FB01}\x{FB00}:y:$&:\x{FB01} => `/', match=
+    1651, # /fi/i:\x{FB00}\x{FB01}:y:$&:\x{FB01} => `/', match=
+
+    # These test that doesn't cut-off matching too soon in the string for
+    # multi-char folds
+    1669, # /ffiffl/i:abcdef\x{FB03}\x{FB04}:y:$&:\x{FB03}\x{FB04} => `/', match=
+    1670, # /\xdf\xdf/ui:abcdefssss:y:$&:ssss => `/', match=
+    1672, # /st/i:\x{DF}\x{FB05}:y:$&:\x{FB05} => `/', match=
+    1673, # /ssst/i:\x{DF}\x{FB05}:y:$&:\x{DF}\x{FB05} => `/', match=
+    # [perl #101970]
+    1678, # /[[:lower:]]/i:\x{100}:y:$&:\x{100} => `/', match=
+    1679, # /[[:upper:]]/i:\x{101}:y:$&:\x{101} => `/', match=
+    # Was matching 'ss' only and failing the entire match, not seeing the
+    # alternative that would succeed
+    1683, # /s\xDF/ui:\xDFs:y:$&:\xDFs => `/', match=
+    1684, # /sst/ui:s\N{LATIN SMALL LIGATURE ST}:y:$&:s\N{LATIN SMALL LIGATURE ST} => `/', match=
+    1685, # /sst/ui:s\N{LATIN SMALL LIGATURE LONG S T}:y:$&:s\N{LATIN SMALL LIGATURE LONG S T} => `/', match=
+    
+    # [perl #111400].  Tests the first Y/N boundary above 255 for each of these.
+    1699, # /[[:alnum:]]/:\x{2c1}:y:-:- => `-', match=
+    1701, # /[[:alpha:]]/:\x{2c1}:y:-:- => `-', match=
+    1703, # /[[:graph:]]/:\x{377}:y:-:- => `-', match=
+    1706, # /[[:lower:]]/:\x{101}:y:-:- => `-', match=
+    1708, # /[[:print:]]/:\x{377}:y:-:- => `-', match=
+    1711, # /[[:punct:]]/:\x{37E}:y:-:- => `-', match=
+    1713, # /[[:upper:]]/:\x{100}:y:-:- => `-', match=
+    1715, # /[[:word:]]/:\x{2c1}:y:-:- => `-', match=
+
+    # $^N, $+ on backtrackracking
+    # BRANCH
+    1739, # ^(.)(?:(..)|B)[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # TRIE
+    1741, # ^(.)(?:BC(.)|B)[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # CURLYX
+    1743, # ^(.)(?:(.)+)*[BX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # CURLYM
+    1746, # ^(.)(BC)*[BX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+    # CURLYN
+    1749, # ^(.)(B)*.[CX]:ABCDE:y:$^N-$+:A-A => `-', match=1
+
+    # [perl #114220]
+    1793, # (utf8::upgrade($subject)) /[\H]/:\x{BF}:y:$&:\xBF => `�', match=1
+    1794, # (utf8::upgrade($subject)) /[\H]/:\x{A0}:n:-:- => false positive
+    1795, # (utf8::upgrade($subject)) /[\H]/:\x{A1}:y:$&:\xA1 => `�', match=1
+
+    # \W in pattern -> !UTF8: add UTF if subject is UTF8 [#15]
+    1804..1807, # \w:\x{200C}:y:$&:\x{200C} => `\', match=
+    #1805, # \W:\x{200C}:n:-:- => false positive
+    #1806, # \w:\x{200D}:y:$&:\x{200D} => `\', match=
+    #1807, # \W:\x{200D}:n:-:- => false positive
+    
+    # again missing UTF [#15]
+    1818..1820, # /^\D{11}/a:\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}\x{10FFFF}:n:-:- => false positive
+    1823, # (utf8::upgrade($subject)) \Vn:\xFFn/:y:$&:\xFFn => `�n', match=1
+    1830, # a?\X:a\x{100}:y:$&:a\x{100} => `a�', match=1
+    1892, # /^\S+=/d:\x{3a3}=\x{3a0}:y:$&:\x{3a3}= => `Σ=', match=1
+    1893, # /^\S+=/u:\x{3a3}=\x{3a0}:y:$&:\x{3a3}= => `Σ=', match=1
+    1936, # /[a-z]/i:\N{KELVIN SIGN}:y:$&:\N{KELVIN SIGN} => `/', match=
+    1937, # /[A-Z]/ia:\N{KELVIN SIGN}:y:$&:\N{KELVIN SIGN} => `/', match=
+    1939, # /[A-Z]/i:\N{LATIN SMALL LETTER LONG S}:y:$&:\N{LATIN SMALL LETTER LONG S} => `/', match=
+    
+    1964, # \N(?#comment){SPACE}:A:c:-:Missing braces on \\N{} => `-', match=
+    1983, # /(?xx:[a b])/x:\N{SPACE}:n:-:- => false positive
+    1985, # /(?xx)[a b]/x:\N{SPACE}:n:-:- => false positive
+
+    # [perl #125825]
+    1945, # /(a+){1}+a/:aaa:n:-:- => false positive
+    
+    # [perl 128420] recursive matches
+    1976, # aa$|a(?R)a|a:aaa:y:$&:aaa => `a', match=1
+
+Note that core tests suite also reveals that about a similar number of
+fails occur with older perls, without PCRE2. Many of them pass with PCRE2.
+
+B<Failures in older perls>:
+
+    -5.12:  629, 1367 (fatal)
+    -5.10:  40..51, 90..91, 93..94, 96..97, 105, 356, 539,
+            541, 543, 577, 1360, 1416, 1418, 1456..1457,
+            1461..1462
+    -5.12:  1448, 1521, 1524, 1577..1578, 1594..1596,
+            1598, 1674..1675
+    -5.14:  1633..1634
+    -5.16:  871, 1745, 1789, 1816
+    -5.18:  1674..1675, 1856..1857, 1885..1886, 1889
+    -5.20:  138..142
+    -5.22:  139, 1958, 1965
+    -5.24:  1977
+
+Invalid tests for older perls (fatal):
+
+    -5.14: 1684..1996
+    -5.20: 1896..1996
+    -5.26: 1981..1996
 
 =head1 AUTHORS
 
