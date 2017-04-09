@@ -354,7 +354,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         if (rc != PCRE2_ERROR_NOMATCH) {
             PCRE2_UCHAR buf[256];
             pcre2_get_error_message(rc, buf, sizeof(buf));
-            croak("PCRE2 match error: %s (%d)\n", buf, (int)rc);
+            Perl_croak(aTHX_ "PCRE2 match error: %s (%d)\n", buf, (int)rc);
         }
         return 0;
     }
@@ -460,7 +460,7 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecou
         SV *sv_dat = *hv_fetch(re->paren_names, key, strlen(key), TRUE);
 
         if (!sv_dat)
-            croak("panic: paren_name hash element allocation failed");
+            Perl_croak(aTHX_ "panic: paren_name hash element allocation failed");
 
         if (!SvPOK(sv_dat)) {
             /* The first (and maybe only) entry with this name */
