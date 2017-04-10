@@ -5,6 +5,9 @@
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
+#ifndef PCRE2_ENDANCHORED
+# define PCRE2_ENDANCHORED 0
+#endif
 #include "PCRE2.h"
 #include "regcomp.h"
 #undef USE_MATCH_CONTEXT
@@ -303,6 +306,10 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     pcre2_match_data *match_data;
     regexp * re = RegSV(rx);
     pcre2_code *ri = (pcre2_code *)re->pprivate;
+
+    /* TODO utf8 problem: if the subject turns out to be utf8 here, but the
+       pattern was not compiled as utf8 aware, we'd need to recompile
+       it here. See GH #15 */
 
     match_data = pcre2_match_data_create_from_pattern(ri, NULL);
     pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);

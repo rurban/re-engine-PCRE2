@@ -12,9 +12,7 @@ use XSLoader ();
 # All engines should subclass the core Regexp package
 our @ISA = 'Regexp';
 
-BEGIN {
-  XSLoader::load;
-}
+XSLoader::load(__PACKAGE__, $XS_VERSION);
 
 # set'able via import
 our @CONTEXT_OPTIONS = qw(
@@ -25,11 +23,11 @@ our @CONTEXT_OPTIONS = qw(
 # TODO: set context options, and save prev. ones for unimport.
 # compile-ctx and match-ctx (see above: @CONTEXT_OPTIONS)
 sub import {
-  $^H{regcomp} = ENGINE;
+  $^H{regcomp} = re::engine::PCRE2::ENGINE();
 }
 
 sub unimport {
-  delete $^H{regcomp} if $^H{regcomp} == ENGINE;
+  delete $^H{regcomp} if $^H{regcomp} == re::engine::PCRE2::ENGINE();
 }
 
 1;

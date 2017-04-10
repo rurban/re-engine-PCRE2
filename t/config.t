@@ -1,9 +1,14 @@
 use strict;
-use Test::More tests => 35;
+use Test::More;
 use Config;
 use re::engine::PCRE2;
 
 my $qr = qr/(a(b?))/;
+if ($] < 5.013 && $qr->_alloptions() == 4294967295) {
+  plan skip_all => "methods return -1";
+} else {
+  plan tests => 35;
+}
 my %m =
   (
    _alloptions => 64,

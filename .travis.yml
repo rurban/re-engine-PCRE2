@@ -43,7 +43,10 @@ before_install:
   - eval $(curl https://travis-perl.github.io/init) --perl
 
 script:
-  - coverage-setup
+  - if [ $RELEASE_TESTING = 1 ]; then
+      coverage-setup;
+      cpan-install Class::XSAccessor Text::CSV_XS List::MoreUtils;
+    fi
   - perl Makefile.PL PREFIX=$HOME/amd64 && make test LDLOADLIBS="-L$HOME/amd64/lib -lpcre2-8"
   - coverage-report
 
@@ -51,6 +54,7 @@ install:
   - export AUTOMATED_TESTING=1 HARNESS_TIMER=1 AUTHOR_TESTING=0 RELEASE_TESTING=0
   - cpan-install --deps       # installs prereqs, including recommends
   - cpan-install --coverage   # installs converage prereqs, if enabled
+  - cpan-install Devel::CheckLib
 
 notifications:
   email:
@@ -63,8 +67,5 @@ matrix:
     - perl: "5.24"
       env: COVERAGE=1 AUTHOR_TESTING=1 RELEASE_TESTING=1 # enables coverage+coveralls reporting
   allow_failures:
-    - env: COVERAGE=1 AUTHOR_TESTING=1 RELEASE_TESTING=1
     - perl: "dev"
-    - perl: "5.10" # DynaLoader
-    - perl: "5.12" # DynaLoader 
 

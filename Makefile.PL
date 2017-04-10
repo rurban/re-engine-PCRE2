@@ -33,6 +33,7 @@ my %WriteMakefileArgs = (
   'ABSTRACT'     => 'PCRE2 regular expression engine with jit',
   'AUTHOR'       => 'Reini Urban <rurban@cpan.org>',
   'BUILD_REQUIRES' => {
+    'Devel::CheckLib' => '1.00',
     'Data::Dumper' => '0',
     'Test::More'   => '0.88',
     ($ENV{RELEASE_TESTING}
