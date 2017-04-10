@@ -18,8 +18,7 @@ regular expressions provided by libpcre2-8.
 This provides jit support and faster matching, but may fail in corner
 cases. See
 [pcre2compat](http://www.pcre.org/current/doc/html/pcre2compat.html).
-It is typically 10% faster than the core regex engine. _(realistic
-benchmarks outstanding)_.
+It is typically 40% faster than the core regex engine. See ["BENCHMARKS"](#benchmarks).
 
 The goal is to pass the full core re testsuite, identify all
 problematic patterns and fall-back to the core re engine.  From the
