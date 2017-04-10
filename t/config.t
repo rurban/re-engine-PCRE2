@@ -1,5 +1,5 @@
 use strict;
-use Test::More tests => 34;
+use Test::More tests => 35;
 use Config;
 use re::engine::PCRE2;
 
@@ -44,10 +44,12 @@ for (sort keys %m) {
 }
 my $s = $qr->size;
 ok($s > 100, "size $s"); # 131 with 32bit, 155 with 64bit
+$s = $qr->framesize;
+ok($s < 1000, "framesize $s");
 
 if (re::engine::PCRE2::JIT) {
   $s = $qr->jitsize;
-  ok($s > 20, "jitsize $s");
+  ok($s > 50, "jitsize $s");
   is(re::engine::PCRE2::config('JIT'), 1, "config JIT 1");
   $s = re::engine::PCRE2::config('JITTARGET');
   ok($s, "config JITTARGET \"$s\"");

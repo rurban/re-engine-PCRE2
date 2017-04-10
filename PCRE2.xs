@@ -150,7 +150,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
       }
     }
 #endif
-    /* TODO: e r l d g c */
+    /* TODO: l d g c */
 
     /* The pattern is known to be UTF-8. Perl wouldn't turn this on unless it's
      * a valid UTF-8 sequence so tell PCRE2 not to check for that */
@@ -505,14 +505,30 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecou
 }
 #endif
 
+/* Note: some pcre versions overwrite the uint32_t value, esp. size.
+   because some values are longer, size_t vs u32! */
 #define DECL_U32_PATTERN_INFO(rx,name,UCNAME) \
 PERL_STATIC_INLINE U32 \
-PCRE2_##name(REGEXP* rx) {   \
+PCRE2_##name(REGEXP* rx)  {  \
     regexp *re = RegSV(rx); \
     pcre2_code *ri = (pcre2_code *)re->pprivate; \
     U32 retval = -1; \
-    pcre2_pattern_info(ri, PCRE2_INFO_##UCNAME, &retval); \
+    pcre2_pattern_info(ri, PCRE2_INFO_##UCNAME, &retval);   \
     return retval; \
+}
+#define DECL_UV_PATTERN_INFO(rx,name,UCNAME) \
+PERL_STATIC_INLINE UV \
+PCRE2_##name(REGEXP* rx)  {  \
+    regexp *re = RegSV(rx); \
+    pcre2_code *ri = (pcre2_code *)re->pprivate; \
+    size_t retval = 0; \
+    pcre2_pattern_info(ri, PCRE2_INFO_##UCNAME, &retval); \
+    return (UV)retval; \
+}
+#define DECL_UNDEF_PATTERN_INFO(rx,name,UCNAME) \
+PERL_STATIC_INLINE UV \
+PCRE2_##name(REGEXP* rx)  {  \
+    return (UV)0; \
 }
 
 DECL_U32_PATTERN_INFO(rx, _alloptions, ALLOPTIONS)
@@ -525,7 +541,6 @@ DECL_U32_PATTERN_INFO(rx, firstcodeunit, FIRSTCODEUNIT)
 DECL_U32_PATTERN_INFO(rx, hasbackslashc, HASBACKSLASHC)
 DECL_U32_PATTERN_INFO(rx, hascrorlf, HASCRORLF)
 DECL_U32_PATTERN_INFO(rx, jchanged, JCHANGED)
-DECL_U32_PATTERN_INFO(rx, jitsize, JITSIZE)
 DECL_U32_PATTERN_INFO(rx, lastcodetype, LASTCODETYPE)
 DECL_U32_PATTERN_INFO(rx, lastcodeunit, LASTCODEUNIT)
 DECL_U32_PATTERN_INFO(rx, matchempty, MATCHEMPTY)
@@ -535,7 +550,14 @@ DECL_U32_PATTERN_INFO(rx, minlength, MINLENGTH)
 DECL_U32_PATTERN_INFO(rx, namecount, NAMECOUNT)
 DECL_U32_PATTERN_INFO(rx, nameentrysize, NAMEENTRYSIZE)
 DECL_U32_PATTERN_INFO(rx, newline, NEWLINE)
-DECL_U32_PATTERN_INFO(rx, size, SIZE)
+
+DECL_UV_PATTERN_INFO(rx, size, SIZE)
+DECL_UV_PATTERN_INFO(rx, jitsize, SIZE)
+#ifdef PCRE2_INFO_FRAMESIZE
+DECL_UV_PATTERN_INFO(rx, framesize, FRAMESIZE)
+#else
+DECL_UNDEF_PATTERN_INFO(rx, framesize, FRAMESIZE)
+#endif
 
 MODULE = re::engine::PCRE2	PACKAGE = re::engine::PCRE2	PREFIX = PCRE2_
 PROTOTYPES: ENABLE
@@ -601,8 +623,16 @@ U32
 PCRE2_jchanged(REGEXP *rx)
 PROTOTYPE: $
 
-U32
+UV
 PCRE2_jitsize(REGEXP *rx)
+PROTOTYPE: $
+
+UV
+PCRE2_size(REGEXP *rx)
+PROTOTYPE: $
+
+UV
+PCRE2_framesize(REGEXP *rx)
 PROTOTYPE: $
 
 U32
@@ -667,10 +697,6 @@ CODE:
 OUTPUT:
     RETVAL
 
-U32
-PCRE2_size(REGEXP *rx)
-PROTOTYPE: $
-
 void
 PCRE2_JIT(...)
 PROTOTYPE:
@@ -719,7 +745,6 @@ PPCODE:
     RET_INT(DEPTHLIMIT) else
 #else
     if (strEQc(opt, "DEPTHLIMIT")) {
-        EXTEND(SP, 1);        \
         XSRETURN_UNDEF;
     }
 #endif

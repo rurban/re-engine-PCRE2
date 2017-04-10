@@ -1,8 +1,9 @@
 Revision history for re::engine::PCRE2
 
-0.07
+0.07 Mon Apr 10 19:13:52 2017 +0200 rurban
 
-    - Fix XS stack in case of config() errors
+    - Fix stack corruption with certain rx size methods on 64bit
+    - Added new framesize method if available. If not 0
     - Prepare for compile and match contexts (import options)
     - Simplify XS method implementation
     - Add config and method tests

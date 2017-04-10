@@ -1,7 +1,7 @@
 package re::engine::PCRE2;
 our ($VERSION, $XS_VERSION);
 BEGIN {
-  $VERSION = '0.06';
+  $VERSION = '0.07';
   $XS_VERSION = $VERSION;
   $VERSION = eval $VERSION;
 }
@@ -168,6 +168,12 @@ situation where L</firstcodetype (RX)> returns 1; otherwise return
 
   my $q=qr/(cat|cow|coyote)/; print $q->firstcodetype, $q->firstcodeunit
   => 1 99
+
+=item framesize (RX)
+
+Undocumented. Only available since pcre-10.24.
+Returns 0 on older versions.
+pcre2_match() frame size (size of top_bracket*2 + heapframe + 2 words).
 
 =item hasbackslashc (RX)
 

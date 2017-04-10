@@ -72,4 +72,5 @@ DBI
 SQLite
 YAML
 cpan
-
+framesize
+heapframe

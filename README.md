@@ -128,6 +128,12 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
         my $q=qr/(cat|cow|coyote)/; print $q->firstcodetype, $q->firstcodeunit
         => 1 99
 
+- framesize (RX)
+
+    Undocumented. Only available since pcre-10.24.
+    Returns 0 on older versions.
+    pcre2\_match() frame size (size of top\_bracket\*2 + heapframe + 2 words).
+
 - hasbackslashc (RX)
 
     Return 1 if the pattern contains any instances of \\C, otherwise 0.
