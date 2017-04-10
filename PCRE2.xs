@@ -572,13 +572,14 @@ PROTOTYPE: $
 void
 firstbitmap(REGEXP *rx)
 PROTOTYPE: $
-PPCODE:
+CODE:
     char* table;
     regexp *re = RegSV(rx);
     pcre2_code *ri = (pcre2_code *)re->pprivate;
     pcre2_pattern_info(ri, PCRE2_INFO_FIRSTBITMAP, table);
-    if (table)
-        mXPUSHp(table, 256/8);
+    if (table) {
+        ST(0) = sv_2mortal(newSVpvn(table, 256/8));
+    }
 
 U32
 PCRE2_firstcodetype(REGEXP *rx)
@@ -638,7 +639,7 @@ PROTOTYPE: $
 
 #if 0
 
-void
+SV*
 nametable(REGEXP *rx)
 PROTOTYPE: $
 PPCODE:
@@ -646,9 +647,8 @@ PPCODE:
     regexp *re = RegSV(rx);
     pcre2_code *ri = (pcre2_code *)re->pprivate;
     pcre2_pattern_info(ri, PCRE2_INFO_NAMETABLE, &RETVAL);
-    if (table) {
-        mXPUSHp(table, strlen(table));
-    }
+    if (table)
+        ST(0) = sv_2mortal(newSVpvn(table, strlen(table)));
 
 #endif
 
@@ -684,7 +684,7 @@ PPCODE:
 #define RET_STR(name) \
     if (strEQc(opt, #name)) { \
         if (pcre2_config(PCRE2_CONFIG_##name, &retbuf) >= 0) { \
-            mXPUSHp(retbuf, strlen(retbuf)); \
+            ST(0) = sv_2mortal(newSVpvn(retbuf, strlen(retbuf))); \
         } else {                             \
             XSRETURN_UNDEF;                  \
         }                                    \
@@ -693,7 +693,7 @@ PPCODE:
 #define RET_INT(name) \
     if (strEQc(opt, #name)) { \
         if (pcre2_config(PCRE2_CONFIG_##name, &retint) >= 0) {   \
-            mXPUSHi(retint);                \
+            ST(0) = sv_2mortal(newSViv(retint)); \
         } else {                            \
             XSRETURN_UNDEF;                 \
         }                                   \
@@ -719,6 +719,7 @@ PPCODE:
     RET_INT(DEPTHLIMIT) else
 #else
     if (strEQc(opt, "DEPTHLIMIT")) {
+        EXTEND(SP, 1);        \
         XSRETURN_UNDEF;
     }
 #endif
