@@ -43,10 +43,7 @@ before_install:
   - eval $(curl https://travis-perl.github.io/init) --perl
 
 script:
-  - if [ $RELEASE_TESTING = 1 ]; then
-      coverage-setup;
-      cpan-install Class::XSAccessor Text::CSV_XS List::MoreUtils;
-    fi
+  - coverage-setup
   - perl Makefile.PL PREFIX=$HOME/amd64 && make test LDLOADLIBS="-L$HOME/amd64/lib -lpcre2-8"
   - coverage-report
 
@@ -55,6 +52,7 @@ install:
   - cpan-install --deps       # installs prereqs, including recommends
   - cpan-install --coverage   # installs converage prereqs, if enabled
   - cpan-install Devel::CheckLib
+  - cpan-install Class::XSAccessor Text::CSV_XS List::MoreUtils
 
 notifications:
   email:
