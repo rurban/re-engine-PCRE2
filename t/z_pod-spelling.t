@@ -75,3 +75,5 @@ cpan
 framesize
 heapframe
 heaplimit
+offsetlimit
+parenslimit

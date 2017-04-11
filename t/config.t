@@ -22,13 +22,13 @@ my %m =
    #size => 155,
    #hasbackslashc => 0,
    hascrorlf => 0,
-   #heaplimit => 20000000,
+   #heaplimit => undef,
    jchanged => 0,
    #jitsize => 155,
    lastcodetype => 0,
    lastcodeunit => 0,
    matchempty => 0,
-   matchlimit => 4294967295,
+   matchlimit => undef,
    maxlookbehind => 0,
    minlength => 1,
    namecount => 0,
@@ -39,14 +39,14 @@ my %m =
 my %o =
   (
    BSR => 1,
-   MATCHLIMIT => 10000000,
    NEWLINE => 2,
+   UNICODE => 1,
    PARENSLIMIT => 250,
    RECURSIONLIMIT => 10000000,
-   #HEAPLIMIT => 20000000 or undef,
+   MATCHLIMIT => 10000000,
    #DEPTHLIMIT => 10000000 or undef,
    #STACKRECURSE => 1 or 0 in newer libs, obsolete
-   UNICODE => 1,
+   #HEAPLIMIT => 20000000 or undef,
   );
 
 for (sort keys %m) {

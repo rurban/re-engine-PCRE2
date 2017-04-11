@@ -14,8 +14,8 @@ XSLoader::load(__PACKAGE__, $XS_VERSION);
 
 # set'able via import
 our @CONTEXT_OPTIONS = qw(
-  bsr max_pattern_length newline parens_nest_limit
-  match_limit offset_limit recursion_limit heap_limit
+  bsr max_pattern_length newline parenslimit
+  matchlimit offsetlimit recursionlimit heaplimit
 );
 
 # TODO: set context options, and save prev. ones for unimport.
@@ -80,18 +80,6 @@ With older library versions which do not support a particular info method, undef
 E.g. hasbackslashc and framesize.
 
 =over
-
-=item match_limit (RX, [INT])
-
-Get or set the match_limit match context. NYI
-
-=item offset_limit (RX, [INT])
-
-NYI
-
-=item recursion_limit (RX, [INT])
-
-NYI
 
 =item _alloptions (RX)
 
@@ -186,11 +174,13 @@ Return 1 if the pattern contains any explicit matches for CR or LF
 characters, otherwise 0. An explicit match is either a literal CR or LF
 character, or \r or \n.
 
-=item heaplimit (RX)
+=item heaplimit (RX, [INT])
 
-Return the current backtracking heap limit in a match context.
-If the limit is not set, the value 4294967295 will be returned.
-Added only since 10.30, with earlier versions it will return undef.
+Get or set the backtracking heap limit in a match context.  If the
+option is not set, build-time 'HEAPLIMIT' option is in effect, which
+is 20000000.  See L</config (OPTION)>.  Added only since 10.30, with
+earlier versions it will return undef.  The setter method is not yet
+implemented.
 
 =item jchanged (RX)
 
@@ -228,11 +218,12 @@ a pattern contains recursive subroutine calls it is not always
 possible to determine whether or not it can match an empty
 string. PCRE2 takes a cautious approach and returns 1 in such cases.
 
-=item matchlimit (RX)
+=item matchlimit (RX, [INT])
 
-If the pattern set a match limit by including an item of the form
-(*LIMIT_MATCH=nnnn) at the start, the value is returned.
-If the limit is not set the value 4294967295 will be returned.
+Get or set the match_limit match context.  Corresponds to the
+pcre-specific C<(*LIMIT_MATCH=nnnn)> option. If the option is not set,
+build-time 'MATCHLIMIT' option is in effect, which is 10000000.
+See L</config (OPTION)>.
 
 =item maxlookbehind (RX)
 
@@ -278,14 +269,20 @@ The entry size depends on the length of the longest name.
 
 The nametable itself is not yet returned.
 
-=item newline (RX)
+=item newline (RX, [INT]))
 
-Returns the newline regime, see below at L</config (OPTION)>.
+Get or set the newline regime.
+The default is the build-time 'NEWLINE' option, i.e. 2 on non-windows systems.
+See L</config (OPTION)>.
+The setter method is not yet implemented.
 
-=item recursionlimit (RX)
+=item recursionlimit (RX, [INT])
 
-If the pattern set a recursion limit by including an item of the form
-(*LIMIT_RECURSION=nnnn) at the start, the value is returned.
+Get or set a recursion limit, i.e. the pcre specific
+C<(*LIMIT_RECURSION=nnnn)> option.
+The default is the build-time 'RECURSIONLIMIT' option.
+See L</config (OPTION)>.
+The setter method is not yet implemented.
 
 =item size (RX)
 
@@ -311,19 +308,31 @@ import lexically sets the PCRE2 engine to be active.
 import will later accept compile context options.
 See L<PCRE2 NATIVE API COMPILE CONTEXT FUNCTIONS|http://www.pcre.org/current/doc/html/pcre2api.html#SEC4>.
 
-  bsr => INT
+  bsr            => INT (default: 1)
   max_pattern_length => INT
-  newline => INT
-  parens_nest_limit => INT
-
-  match_limit => INT
-  offset_limit => INT
-  recursion_limit => INT
+  newline        => INT (default: 2)
+  parenslimit    => INT (default: 250)
+  matchlimit     => INT (default: 10000000)
+  offsetlimit    => INT (default: ?)
+  recursionlimit => INT (default: 10000000) i.e. the depthlimit
+  heaplimit      => INT (default: 20000000) ony since 10.30
 
 =item unimport
 
 unimport sets the regex engine to the previous one.
 If PCRE2 with the previous context options.
+
+=item offsetlimit ([INT])
+
+Get or set the offset_limit in the match context.
+The method is not yet implemented.
+
+=item parenslimit ([INT])
+
+Get or set the parens_nest_limit in the match context.
+The default is the build-time 'PARENSLIMIT' option, 250.
+See L</config (OPTION)>.
+The method is not yet implemented.
 
 =item ENGINE
 

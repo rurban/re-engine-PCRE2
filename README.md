@@ -44,18 +44,6 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
 With older library versions which do not support a particular info method, undef is returned.
 E.g. hasbackslashc and framesize.
 
-- match\_limit (RX, \[INT\])
-
-    Get or set the match\_limit match context. NYI
-
-- offset\_limit (RX, \[INT\])
-
-    NYI
-
-- recursion\_limit (RX, \[INT\])
-
-    NYI
-
 - \_alloptions (RX)
 
     The result of pcre2\_pattern\_info(PCRE2\_INFO\_ALLOPTIONS) as unsigned integer.
@@ -149,11 +137,13 @@ E.g. hasbackslashc and framesize.
     characters, otherwise 0. An explicit match is either a literal CR or LF
     character, or \\r or \\n.
 
-- heaplimit (RX)
+- heaplimit (RX, \[INT\])
 
-    Return the current backtracking heap limit in a match context.
-    If the limit is not set, the value 4294967295 will be returned.
-    Added only since 10.30, with earlier versions it will return undef.
+    Get or set the backtracking heap limit in a match context.  If the
+    option is not set, build-time 'HEAPLIMIT' option is in effect, which
+    is 20000000.  See ["config (OPTION)"](#config-option).  Added only since 10.30, with
+    earlier versions it will return undef.  The setter method is not yet
+    implemented.
 
 - jchanged (RX)
 
@@ -191,11 +181,12 @@ E.g. hasbackslashc and framesize.
     possible to determine whether or not it can match an empty
     string. PCRE2 takes a cautious approach and returns 1 in such cases.
 
-- matchlimit (RX)
+- matchlimit (RX, \[INT\])
 
-    If the pattern set a match limit by including an item of the form
-    (\*LIMIT\_MATCH=nnnn) at the start, the value is returned.
-    If the limit is not set the value 4294967295 will be returned.
+    Get or set the match\_limit match context.  Corresponds to the
+    pcre-specific `(*LIMIT_MATCH=nnnn)` option. If the option is not set,
+    build-time 'MATCHLIMIT' option is in effect, which is 10000000.
+    See ["config (OPTION)"](#config-option).
 
 - maxlookbehind (RX)
 
@@ -240,14 +231,20 @@ E.g. hasbackslashc and framesize.
 
     The nametable itself is not yet returned.
 
-- newline (RX)
+- newline (RX, \[INT\]))
 
-    Returns the newline regime, see below at ["config (OPTION)"](#config-option).
+    Get or set the newline regime.
+    The default is the build-time 'NEWLINE' option, i.e. 2 on non-windows systems.
+    See ["config (OPTION)"](#config-option).
+    The setter method is not yet implemented.
 
-- recursionlimit (RX)
+- recursionlimit (RX, \[INT\])
 
-    If the pattern set a recursion limit by including an item of the form
-    (\*LIMIT\_RECURSION=nnnn) at the start, the value is returned.
+    Get or set a recursion limit, i.e. the pcre specific
+    `(*LIMIT_RECURSION=nnnn)` option.
+    The default is the build-time 'RECURSIONLIMIT' option.
+    See ["config (OPTION)"](#config-option).
+    The setter method is not yet implemented.
 
 - size (RX)
 
@@ -269,19 +266,31 @@ E.g. hasbackslashc and framesize.
     import will later accept compile context options.
     See [PCRE2 NATIVE API COMPILE CONTEXT FUNCTIONS](http://www.pcre.org/current/doc/html/pcre2api.html#SEC4).
 
-        bsr => INT
+        bsr            => INT (default: 1)
         max_pattern_length => INT
-        newline => INT
-        parens_nest_limit => INT
-
-        match_limit => INT
-        offset_limit => INT
-        recursion_limit => INT
+        newline        => INT (default: 2)
+        parenslimit    => INT (default: 250)
+        matchlimit     => INT (default: 10000000)
+        offsetlimit    => INT (default: ?)
+        recursionlimit => INT (default: 10000000) i.e. the depthlimit
+        heaplimit      => INT (default: 20000000) ony since 10.30
 
 - unimport
 
     unimport sets the regex engine to the previous one.
     If PCRE2 with the previous context options.
+
+- offsetlimit (\[INT\])
+
+    Get or set the offset\_limit in the match context.
+    The method is not yet implemented.
+
+- parenslimit (\[INT\])
+
+    Get or set the parens\_nest\_limit in the match context.
+    The default is the build-time 'PARENSLIMIT' option, 250.
+    See ["config (OPTION)"](#config-option).
+    The method is not yet implemented.
 
 - ENGINE
 

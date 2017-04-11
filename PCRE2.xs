@@ -31,10 +31,10 @@ static char retbuf[64];
 #define RegSV(p) (p)
 #endif
 
+static pcre2_match_context_8 *match_context = NULL;
 #ifdef USE_MATCH_CONTEXT
 static pcre2_jit_stack *jit_stack = NULL;
-static pcre2_compile_context *compile_context = NULL;
-static pcre2_match_context *match_context = NULL;
+static pcre2_compile_context_8 *compile_context = NULL;
 
 /* default is 32k already */
 static pcre2_jit_stack *get_jit_stack(void)
@@ -570,6 +570,7 @@ DECL_U32_PATTERN_INFO(rx, minlength, MINLENGTH)
 DECL_U32_PATTERN_INFO(rx, namecount, NAMECOUNT)
 DECL_U32_PATTERN_INFO(rx, nameentrysize, NAMEENTRYSIZE)
 DECL_U32_PATTERN_INFO(rx, newline, NEWLINE)
+DECL_U32_PATTERN_INFO(rx, recursionlimit, RECURSIONLIMIT)
 
 DECL_UV_PATTERN_INFO(rx, size, SIZE)
 DECL_UV_PATTERN_INFO(rx, jitsize, SIZE)
@@ -598,7 +599,15 @@ U32
 PCRE2_backrefmax(REGEXP *rx)
 
 U32
-PCRE2_bsr(REGEXP *rx)
+PCRE2_bsr(REGEXP *rx, U32 value=0)
+CODE:
+    if (items == 2)
+        croak("bsr setter nyi");
+    RETVAL = PCRE2_bsr(rx);
+    if (RETVAL == (U32)-1)
+        XSRETURN_UNDEF;
+OUTPUT:
+    RETVAL
 
 U32
 PCRE2_capturecount(REGEXP *rx)
@@ -644,9 +653,11 @@ U32
 PCRE2_hascrorlf(REGEXP *rx)
 
 void
-PCRE2_heaplimit(REGEXP *rx)
+heaplimit(REGEXP *rx, U32 value=0)
 PPCODE:
 #ifdef PCRE2_INFO_HEAPLIMIT
+    if (items == 2 && match_context)
+        pcre2_set_heap_limit(match_context, (PCRE2_SIZE)value);
     mXPUSHu(PCRE2_heaplimit(rx));
 #else
     XSRETURN_UNDEF;
@@ -671,7 +682,15 @@ U32
 PCRE2_matchempty(REGEXP *rx)
 
 U32
-PCRE2_matchlimit(REGEXP *rx)
+matchlimit(REGEXP *rx, U32 value=0)
+CODE:
+    if (items == 2)
+        croak("matchlimit setter nyi");
+    RETVAL = PCRE2_matchlimit(rx);
+    if (RETVAL == (U32)-1)
+        XSRETURN_UNDEF;
+OUTPUT:
+    RETVAL
 
 U32
 PCRE2_maxlookbehind(REGEXP *rx)
@@ -704,12 +723,28 @@ U32
 PCRE2_newline(REGEXP *rx)
 
 U32
-recursionlimit(REGEXP *rx)
+recursionlimit(REGEXP *rx, U32 value=0)
 CODE:
-    regexp *re = RegSV(rx);
-    pcre2_code *ri = (pcre2_code *)re->pprivate;
-    if (pcre2_pattern_info(ri, PCRE2_INFO_RECURSIONLIMIT, &RETVAL) < 0)
+    if (items == 2 && match_context)
+        pcre2_set_depth_limit(match_context, (PCRE2_SIZE)value);
+    RETVAL = PCRE2_recursionlimit(rx);
+    if (RETVAL == (U32)-1)
         XSRETURN_UNDEF;
+OUTPUT:
+    RETVAL
+
+U32
+offsetlimit(U32 value=0)
+CODE:
+    if (match_context) {
+        if (items == 1)
+            pcre2_set_offset_limit(match_context, (PCRE2_SIZE)value);
+#ifdef USE_MATCH_CONTEXT
+        RETVAL = match_context->offset_limit;
+#endif
+    } else {
+        XSRETURN_UNDEF;
+    }
 OUTPUT:
     RETVAL
 
