@@ -54,7 +54,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 {
     REGEXP *rx;
     regexp *re;
-    pcre2_code *ri = NULL;
+    struct re_engine_pcre2_data *ridata = malloc(sizeof(struct re_engine_pcre2_data));
 
     STRLEN plen;
     char  *exp = SvPV((SV*)pattern, plen);
@@ -172,7 +172,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
         options |= (PCRE2_UTF|PCRE2_NO_UTF_CHECK);
 
-    ri = pcre2_compile(
+    ridata->ri = pcre2_compile(
         (PCRE2_SPTR8)exp, plen,    /* pattern */
         options,      /* options */
         &errcode,     /* errors */
@@ -184,7 +184,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
     );
 
-    if (ri == NULL) {
+    if (ridata->ri == NULL) {
         PCRE2_UCHAR buf[256];
         /* ignore matching errors. prefer the core error */
         if (errcode < 100) { /* Compile errors */
@@ -198,10 +198,12 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
                         (unsigned)erroffset, buf, errcode);
         }
         return Perl_re_compile(aTHX_ pattern, flags);
+    } else {
+        ridata->match_data = pcre2_match_data_create_from_pattern(ridata->ri, NULL);
     }
     /* pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) */
-    pcre2_jit_compile(ri, PCRE2_JIT_COMPLETE); /* no partial matches */
+    pcre2_jit_compile(ridata->ri, PCRE2_JIT_COMPLETE); /* no partial matches */
 
 #if PERL_VERSION >= 12
     rx = (REGEXP*) newSV_type(SVt_REGEXP);
@@ -242,21 +244,21 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
 
     /* Store our private object */
-    re->pprivate = ri;
+    re->pprivate = ridata;
 
     /* If named captures are defined make rx->paren_names */
 #if PERL_VERSION >= 14
-    (void)pcre2_pattern_info(ri, PCRE2_INFO_NAMECOUNT, &namecount);
+    (void)pcre2_pattern_info(ridata->ri, PCRE2_INFO_NAMECOUNT, &namecount);
 
     if ((namecount <= 0) || (options & PCRE2_NO_AUTO_CAPTURE)) {
         re->paren_names = NULL;
     } else {
-        PCRE2_make_nametable(re, ri, namecount);
+        PCRE2_make_nametable(re, ridata->ri, namecount);
     }
 #endif
 
     /* Check how many parens we need */
-    (void)pcre2_pattern_info(ri, PCRE2_INFO_CAPTURECOUNT, &nparens);
+    (void)pcre2_pattern_info(ridata->ri, PCRE2_INFO_CAPTURECOUNT, &nparens);
     re->nparens = re->lastparen = re->lastcloseparen = nparens;
     Newxz(re->offs, nparens + 1, regexp_paren_pair);
 
@@ -311,15 +313,14 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     I32 i;
     int have_jit;
     PCRE2_SIZE *ovector;
-    pcre2_match_data *match_data;
     regexp * re = RegSV(rx);
-    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    struct re_engine_pcre2_data *ridata = re->pprivate;
+    pcre2_code *ri = ridata->ri;
 
     /* TODO utf8 problem: if the subject turns out to be utf8 here, but the
        pattern was not compiled as utf8 aware, we'd need to recompile
        it here. See GH #15 */
 
-    match_data = pcre2_match_data_create_from_pattern(ri, NULL);
     pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) {
 #ifdef USE_MATCH_CONTEXT
@@ -341,7 +342,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
             re->intflags & PUBLIC_JIT_MATCH_OPTIONS,
-            match_data,           /* block for storing the result */
+            ridata->match_data,           /* block for storing the result */
 #ifdef USE_MATCH_CONTEXT
             match_context
 #else
@@ -361,7 +362,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
             re->intflags & PUBLIC_MATCH_OPTIONS,
-            match_data,           /* block for storing the result */
+            ridata->match_data,           /* block for storing the result */
 #ifdef USE_MATCH_CONTEXT
             match_context
 #else
@@ -372,7 +373,6 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
     /* Matching failed */
     if (rc < 0) {
-        pcre2_match_data_free(match_data);
 #ifdef USE_MATCH_CONTEXT
         if (have_jit && match_context)
             pcre2_match_context_free(match_context);
@@ -388,8 +388,8 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     re->subbeg = strbeg;
     re->sublen = strend - strbeg;
 
-    rc = pcre2_get_ovector_count(match_data);
-    ovector = pcre2_get_ovector_pointer(match_data);
+    rc = pcre2_get_ovector_count(ridata->match_data);
+    ovector = pcre2_get_ovector_pointer(ridata->match_data);
     for (i = 0; i < rc; i++) {
         re->offs[i].start = ovector[i * 2];
         re->offs[i].end   = ovector[i * 2 + 1];
@@ -401,7 +401,6 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     }
 
     /* XXX: nparens needs to be set to CAPTURECOUNT */
-    pcre2_match_data_free(match_data);
 #ifdef USE_MATCH_CONTEXT
     if (have_jit && match_context)
         pcre2_match_context_free(match_context);
@@ -441,7 +440,11 @@ void
 PCRE2_free(pTHX_ REGEXP * const rx)
 {
     regexp *re = RegSV(rx);
-    pcre2_code_free((pcre2_code *)re->pprivate);
+    struct re_engine_pcre2_data *ridata = re->pprivate;
+    pcre2_code *ri = ridata->ri;
+    pcre2_code_free(ri);
+    pcre2_match_data_free(ridata->match_data);
+    free(ridata);
 }
 
 void *
@@ -526,7 +529,8 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecou
 PERL_STATIC_INLINE U32 \
 PCRE2_##name(REGEXP* rx)  {  \
     regexp *re = RegSV(rx); \
-    pcre2_code *ri = (pcre2_code *)re->pprivate; \
+    struct re_engine_pcre2_data *ridata = re->pprivate; \
+    pcre2_code *ri = ridata->ri; \
     U32 retval = -1; \
     pcre2_pattern_info(ri, PCRE2_INFO_##UCNAME, &retval);   \
     return retval; \
@@ -535,7 +539,8 @@ PCRE2_##name(REGEXP* rx)  {  \
 PERL_STATIC_INLINE UV \
 PCRE2_##name(REGEXP* rx)  {  \
     regexp *re = RegSV(rx); \
-    pcre2_code *ri = (pcre2_code *)re->pprivate; \
+    struct re_engine_pcre2_data *ridata = re->pprivate; \
+    pcre2_code *ri = ridata->ri; \
     size_t retval = 0; \
     pcre2_pattern_info(ri, PCRE2_INFO_##UCNAME, &retval); \
     return (UV)retval; \
@@ -606,7 +611,8 @@ firstbitmap(REGEXP *rx)
 CODE:
     char* table;
     regexp *re = RegSV(rx);
-    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    struct re_engine_pcre2_data *ridata = re->pprivate;
+    pcre2_code *ri = ridata->ri;
     pcre2_pattern_info(ri, PCRE2_INFO_FIRSTBITMAP, table);
     if (table) {
         ST(0) = sv_2mortal(newSVpvn(table, 256/8));
@@ -681,7 +687,8 @@ PROTOTYPE: $
 PPCODE:
     U8* table;
     regexp *re = RegSV(rx);
-    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    struct re_engine_pcre2_data *ridata = re->pprivate;
+    pcre2_code *ri = ridata->ri;
     pcre2_pattern_info(ri, PCRE2_INFO_NAMETABLE, &RETVAL);
     if (table)
         ST(0) = sv_2mortal(newSVpvn(table, strlen(table)));
@@ -695,7 +702,8 @@ U32
 recursionlimit(REGEXP *rx)
 CODE:
     regexp *re = RegSV(rx);
-    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    struct re_engine_pcre2_data *ridata = re->pprivate;
+    pcre2_code *ri = ridata->ri;
     if (pcre2_pattern_info(ri, PCRE2_INFO_RECURSIONLIMIT, &RETVAL) < 0)
         XSRETURN_UNDEF;
 OUTPUT:
