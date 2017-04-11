@@ -1,10 +1,8 @@
 package re::engine::PCRE2;
-our ($VERSION, $XS_VERSION);
-BEGIN {
-  $VERSION = '0.08';
-  $XS_VERSION = $VERSION;
-  $VERSION = eval $VERSION;
-}
+our $VERSION = '0.09';
+our $XS_VERSION = $VERSION;
+$VERSION = eval $VERSION;
+
 use 5.010;
 use strict;
 use XSLoader ();

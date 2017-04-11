@@ -7,7 +7,7 @@ is(join("/", @w), "a/:/b", 'split /(:)/, "a:b"');
 is(scalar @w, 3, "length 3");
 
 @w = split " ", " foo bar  zar ";
-is(join(":", @w), "foo:bar:zar", 'The " " special case');
+is(join(":", @w), "foo:bar:zar", 'The " " special case: skip white');
 is(scalar @w, 3, 'length 3');
 
 # The /^/ special case
@@ -20,9 +20,6 @@ is(join(":", @w), "a:b:c:d", 'The /\s+/ special case');
 is(scalar @w, 4, 'length 4');
 
 # / /, not a special case
-TODO: {
-    local $TODO = 'PCRE2 bug or missing option';
-    my @w = split / /, " x y ";
-    is(join(":", @w), ":x:y", '/ /, not a special case');
-    is(scalar @w, 3, 'length 3');
-}
+@w = split / /, " x y ";
+is(join(":", @w), ":x:y", '/ / no skip white');
+is(scalar @w, 3, 'length 3');

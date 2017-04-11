@@ -79,9 +79,13 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     I32 namecount;
 #endif
 
-    /* C<split " ">, bypass the PCRE2 engine alltogether and act as perl does */
-    if (flags & RXf_SPLIT && plen == 1 && exp[0] == ' ')
-        extflags |= (RXf_SKIPWHITE|RXf_WHITE);
+    if (plen == 1 && exp[0] == ' ') {
+        /* C<split " ">, bypass the PCRE2 engine alltogether and act as perl does */
+        if (flags & RXf_SPLIT)
+            extflags |= (RXf_SKIPWHITE|RXf_WHITE);
+        else /* Have C<split / /> split on whitespace. / /," x y " -> (,x,y) */
+            extflags |= RXf_WHITE;
+    }
 
     /* RXf_NULL - Have C<split //> split by characters */
     if (plen == 0)

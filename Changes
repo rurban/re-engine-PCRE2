@@ -1,5 +1,9 @@
 Revision history for re::engine::PCRE2
 
+0.09 Tue Apr 11 13:49:30 2017 +0200 rurban
+
+    - Fix split / /, " a b c" special case: don't skip starting whitespace.
+
 0.08 Tue Apr 11 08:35:51 2017 +0200 rurban
 
     - Support all older libpcre2 versions.
