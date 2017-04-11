@@ -15,7 +15,7 @@ XSLoader::load(__PACKAGE__, $XS_VERSION);
 # set'able via import
 our @CONTEXT_OPTIONS = qw(
   bsr max_pattern_length newline parens_nest_limit
-  match_limit offset_limit recursion_limit
+  match_limit offset_limit recursion_limit heap_limit
 );
 
 # TODO: set context options, and save prev. ones for unimport.
@@ -178,13 +178,19 @@ The pcre2_match() frame size.
 
 Return 1 if the pattern contains any instances of \C, otherwise 0.
 Note that \C is forbidden since perl 5.26 (?).
-With an older pcre2 library undef might be returned.
+With an older pcre2 library undef will be returned.
 
 =item hascrorlf (RX)
 
 Return 1 if the pattern contains any explicit matches for CR or LF
 characters, otherwise 0. An explicit match is either a literal CR or LF
 character, or \r or \n.
+
+=item heaplimit (RX)
+
+Return the current backtracking heap limit in a match context.
+If the limit is not set, the value 4294967295 will be returned.
+Added only since 10.30, with earlier versions it will return undef.
 
 =item jchanged (RX)
 
@@ -226,6 +232,7 @@ string. PCRE2 takes a cautious approach and returns 1 in such cases.
 
 If the pattern set a match limit by including an item of the form
 (*LIMIT_MATCH=nnnn) at the start, the value is returned.
+If the limit is not set the value 4294967295 will be returned.
 
 =item maxlookbehind (RX)
 
@@ -342,6 +349,7 @@ OPTIONS can be one of the following strings:
     JIT
     LINKSIZE
     MATCHLIMIT
+    HEAPLIMIT       (Only since 10.30)
     NEWLINE
     PARENSLIMIT
     DEPTHLIMIT      (Not always defined)

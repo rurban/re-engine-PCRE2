@@ -74,3 +74,4 @@ YAML
 cpan
 framesize
 heapframe
+heaplimit

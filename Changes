@@ -1,5 +1,7 @@
 Revision history for re::engine::PCRE2
 
+    - Add the new heaplimit method and config option.
+
 0.09 Tue Apr 11 13:49:30 2017 +0200 rurban
 
     - Fix split / /, " a b c" special case: don't skip starting whitespace.

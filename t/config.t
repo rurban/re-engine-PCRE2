@@ -7,7 +7,7 @@ my $qr = qr/(a(b?))/;
 if ($] < 5.013 && $qr->_alloptions() == 4294967295) {
   plan skip_all => "methods return -1";
 } else {
-  plan tests => 35;
+  plan tests => 37;
 }
 my %m =
   (
@@ -22,6 +22,7 @@ my %m =
    #size => 155,
    #hasbackslashc => 0,
    hascrorlf => 0,
+   #heaplimit => 20000000,
    jchanged => 0,
    #jitsize => 155,
    lastcodetype => 0,
@@ -42,6 +43,7 @@ my %o =
    NEWLINE => 2,
    PARENSLIMIT => 250,
    RECURSIONLIMIT => 10000000,
+   #HEAPLIMIT => 20000000 or undef,
    #DEPTHLIMIT => 10000000 or undef,
    #STACKRECURSE => 1 or 0 in newer libs, obsolete
    UNICODE => 1,
@@ -56,6 +58,8 @@ $s = $qr->framesize;
 ok($s < 1000 || !defined($s), "framesize $s");
 $s = $qr->hasbackslashc;
 ok($s == 0 || !defined($s), "hasbackslashc $s");
+$s = $qr->heaplimit;
+ok($s == 4294967295 || !defined($s), "heaplimit $s");
 
 if (re::engine::PCRE2::JIT) {
   $s = $qr->jitsize;
@@ -79,6 +83,8 @@ for (sort keys %o) {
 }
 $s = re::engine::PCRE2::config("DEPTHLIMIT");
 ok(!defined $s || $s == 10000000, "config DEPTHLIMIT $s");
+$s = re::engine::PCRE2::config("HEAPLIMIT");
+ok(!defined $s || $s == 20000000, "config HEAPLIMIT $s");
 $s = re::engine::PCRE2::config("STACKRECURSE");
 ok($s == 0 || $s == 1, "config STACKRECURSE $s");
 $s = re::engine::PCRE2::config("UNICODE_VERSION");

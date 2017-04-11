@@ -557,6 +557,9 @@ DECL_U32_PATTERN_INFO(rx, firstcodeunit, FIRSTCODEUNIT)
 DECL_U32_PATTERN_INFO(rx, hasbackslashc, HASBACKSLASHC)
 #endif
 DECL_U32_PATTERN_INFO(rx, hascrorlf, HASCRORLF)
+#ifdef PCRE2_INFO_HEAPLIMIT
+DECL_U32_PATTERN_INFO(rx, heaplimit, HEAPLIMIT)
+#endif
 DECL_U32_PATTERN_INFO(rx, jchanged, JCHANGED)
 DECL_U32_PATTERN_INFO(rx, lastcodetype, LASTCODETYPE)
 DECL_U32_PATTERN_INFO(rx, lastcodeunit, LASTCODEUNIT)
@@ -639,6 +642,15 @@ PPCODE:
 
 U32
 PCRE2_hascrorlf(REGEXP *rx)
+
+void
+PCRE2_heaplimit(REGEXP *rx)
+PPCODE:
+#ifdef PCRE2_INFO_HEAPLIMIT
+    mXPUSHu(PCRE2_heaplimit(rx));
+#else
+    XSRETURN_UNDEF;
+#endif
 
 U32
 PCRE2_jchanged(REGEXP *rx)
@@ -729,6 +741,10 @@ PPCODE:
         }                                   \
         XSRETURN(1);                        \
     }
+#define RET_NO(name) \
+    if (strEQc(opt, #name)) { \
+        XSRETURN_UNDEF;       \
+    }
 
 void
 PCRE2_config(char* opt)
@@ -748,14 +764,21 @@ PPCODE:
 #ifdef PCRE2_CONFIG_DEPTHLIMIT
     RET_INT(DEPTHLIMIT) else
 #else
-    if (strEQc(opt, "DEPTHLIMIT")) {
-        XSRETURN_UNDEF;
-    }
+    RET_NO(DEPTHLIMIT) else
 #endif
 #ifdef PCRE2_CONFIG_RECURSIONLIMIT
     RET_INT(RECURSIONLIMIT) else /* Obsolete synonym */
+#else
+    RET_NO(RECURSIONLIMIT) else
 #endif
 #ifdef PCRE2_CONFIG_STACKRECURSE
     RET_INT(STACKRECURSE) else   /* Obsolete. Always 0 in newer libs */
+#else
+    RET_NO(STACKRECURSE) else
+#endif
+#ifdef PCRE2_CONFIG_HEAPLIMIT
+    RET_INT(HEAPLIMIT) else /* Since 10.30 only */
+#else
+    RET_NO(HEAPLIMIT) else
 #endif
     Perl_croak(aTHX_ "Invalid config argument %s", opt);

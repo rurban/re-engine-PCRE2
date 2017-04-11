@@ -141,13 +141,19 @@ E.g. hasbackslashc and framesize.
 
     Return 1 if the pattern contains any instances of \\C, otherwise 0.
     Note that \\C is forbidden since perl 5.26 (?).
-    With an older pcre2 library undef might be returned.
+    With an older pcre2 library undef will be returned.
 
 - hascrorlf (RX)
 
     Return 1 if the pattern contains any explicit matches for CR or LF
     characters, otherwise 0. An explicit match is either a literal CR or LF
     character, or \\r or \\n.
+
+- heaplimit (RX)
+
+    Return the current backtracking heap limit in a match context.
+    If the limit is not set, the value 4294967295 will be returned.
+    Added only since 10.30, with earlier versions it will return undef.
 
 - jchanged (RX)
 
@@ -189,6 +195,7 @@ E.g. hasbackslashc and framesize.
 
     If the pattern set a match limit by including an item of the form
     (\*LIMIT\_MATCH=nnnn) at the start, the value is returned.
+    If the limit is not set the value 4294967295 will be returned.
 
 - maxlookbehind (RX)
 
@@ -300,6 +307,7 @@ E.g. hasbackslashc and framesize.
         JIT
         LINKSIZE
         MATCHLIMIT
+        HEAPLIMIT       (Only since 10.30)
         NEWLINE
         PARENSLIMIT
         DEPTHLIMIT      (Not always defined)
