@@ -1,48 +1,28 @@
 use strict;
-use Test::More tests => 20;
+use Test::More tests => 10;
 use re::engine::PCRE2;
 
-{
-    my ($a, $b, $c) = split /(:)/, "a:b";
-    is($a, "a");
-    is($b, ":");
-    is($c, "b");
-}
+my @w = split /(:)/, "a:b";
+is(join("/", @w), "a/:/b", 'split /(:)/, "a:b"');
+is(scalar @w, 3, "length 3");
 
-# The " " special case
-{
-    my ($a, $b, $c, $d, $e) = split " ", " foo bar  zar ";
-    is($a, "foo");
-    is($b, "bar");
-    is($c, "zar");
-    is($d, "");
-    is($e, undef);
-}
+@w = split " ", " foo bar  zar ";
+is(join(":", @w), "foo:bar:zar", 'The " " special case');
+is(scalar @w, 3, 'length 3');
 
 # The /^/ special case
-{
-    my ($a, $b, $c) = split /^/, "a\nb\nc\n";
-    is($a, "a\n");
-    is($b, "b\n");
-    is($c, "c\n");
-}
+@w = split /^/, "a\nb\nc\n";
+is(join(":", @w), "a\n:b\n:c\n", 'The /^/ special case');
+is(scalar @w, 3, 'length 3');
 
-# The /\s+/ special case
-{
-    my ($a, $b, $c, $d) = split /\s+/, "a b  c\t d";
-    is($a, "a");
-    is($b, "b");
-    is($c, "c");
-    is($d, "d");
-}
+@w = split /\s+/, "a b  c\t d";
+is(join(":", @w), "a:b:c:d", 'The /\s+/ special case');
+is(scalar @w, 4, 'length 4');
 
 # / /, not a special case
-SKIP: {
-    skip 'bug in PCRE.xs' => 5;
-    my ($a, $b, $c, $d, $e) = split / /, " x y ";
-    is($a, "");
-    is($b, "x");
-    is($c, "y");
-    is($d, "");
-    is($e, undef);
+TODO: {
+    local $TODO = 'PCRE2 bug or missing option';
+    my @w = split / /, " x y ";
+    is(join(":", @w), ":x:y", '/ /, not a special case');
+    is(scalar @w, 3, 'length 3');
 }
