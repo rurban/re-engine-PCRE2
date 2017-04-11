@@ -18,9 +18,12 @@ my %m =
    capturecount => 2,
    firstcodetype => 1,
    firstcodeunit => 97,
-   hasbackslashc => 0,
+   #framesize => undef,
+   #size => 155,
+   #hasbackslashc => 0,
    hascrorlf => 0,
    jchanged => 0,
+   #jitsize => 155,
    lastcodetype => 0,
    lastcodeunit => 0,
    matchempty => 0,
@@ -50,7 +53,9 @@ for (sort keys %m) {
 my $s = $qr->size;
 ok($s > 100, "size $s"); # 131 with 32bit, 155 with 64bit
 $s = $qr->framesize;
-ok($s < 1000, "framesize $s");
+ok($s < 1000 || !defined($s), "framesize $s");
+$s = $qr->hasbackslashc;
+ok($s == 0 || !defined($s), "hasbackslashc $s");
 
 if (re::engine::PCRE2::JIT) {
   $s = $qr->jitsize;

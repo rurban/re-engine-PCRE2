@@ -1,7 +1,7 @@
 package re::engine::PCRE2;
 our ($VERSION, $XS_VERSION);
 BEGIN {
-  $VERSION = '0.07';
+  $VERSION = '0.08';
   $XS_VERSION = $VERSION;
   $VERSION = eval $VERSION;
 }
@@ -76,7 +76,10 @@ Check with:
 Since re::engine::PCRE2 derives from the C<Regexp> package, you can call
 compiled C<qr//> objects with these methods.
 See L<PCRE2 NATIVE API MATCH CONTEXT FUNCTIONS|http://www.pcre.org/current/doc/html/pcre2api.html#SEC5>
-and L<INFORMATION ABOUT A COMPILED PATTERN|http://www.pcre.org/current/doc/html/pcre2api.html#SEC22>
+and L<INFORMATION ABOUT A COMPILED PATTERN|http://www.pcre.org/current/doc/html/pcre2api.html#SEC22>.
+
+With older library versions which do not support a particular info method, undef is returned.
+E.g. hasbackslashc and framesize.
 
 =over
 
@@ -170,13 +173,14 @@ situation where L</firstcodetype (RX)> returns 1; otherwise return
 =item framesize (RX)
 
 Undocumented. Only available since pcre-10.24.
-Returns 0 on older versions.
-pcre2_match() frame size (size of top_bracket*2 + heapframe + 2 words).
+Returns undef on older versions.
+The pcre2_match() frame size.
 
 =item hasbackslashc (RX)
 
 Return 1 if the pattern contains any instances of \C, otherwise 0.
 Note that \C is forbidden since perl 5.26 (?).
+With an older pcre2 library undef might be returned.
 
 =item hascrorlf (RX)
 

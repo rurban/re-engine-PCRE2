@@ -5,8 +5,12 @@
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
+/* older versions: */
 #ifndef PCRE2_ENDANCHORED
 # define PCRE2_ENDANCHORED 0
+#endif
+#ifndef PCRE2_NO_JIT
+# define PCRE2_NO_JIT 0
 #endif
 #include "PCRE2.h"
 #include "regcomp.h"
@@ -535,7 +539,7 @@ PCRE2_##name(REGEXP* rx)  {  \
 #define DECL_UNDEF_PATTERN_INFO(rx,name,UCNAME) \
 PERL_STATIC_INLINE UV \
 PCRE2_##name(REGEXP* rx)  {  \
-    return (UV)0; \
+    return (UV)-1; \
 }
 
 DECL_U32_PATTERN_INFO(rx, _alloptions, ALLOPTIONS)
@@ -545,7 +549,9 @@ DECL_U32_PATTERN_INFO(rx, bsr, BSR)
 DECL_U32_PATTERN_INFO(rx, capturecount, CAPTURECOUNT)
 DECL_U32_PATTERN_INFO(rx, firstcodetype, FIRSTCODETYPE)
 DECL_U32_PATTERN_INFO(rx, firstcodeunit, FIRSTCODEUNIT)
+#ifdef PCRE2_INFO_HASBACKSLASHC
 DECL_U32_PATTERN_INFO(rx, hasbackslashc, HASBACKSLASHC)
+#endif
 DECL_U32_PATTERN_INFO(rx, hascrorlf, HASCRORLF)
 DECL_U32_PATTERN_INFO(rx, jchanged, JCHANGED)
 DECL_U32_PATTERN_INFO(rx, lastcodetype, LASTCODETYPE)
@@ -562,8 +568,6 @@ DECL_UV_PATTERN_INFO(rx, size, SIZE)
 DECL_UV_PATTERN_INFO(rx, jitsize, SIZE)
 #ifdef PCRE2_INFO_FRAMESIZE
 DECL_UV_PATTERN_INFO(rx, framesize, FRAMESIZE)
-#else
-DECL_UNDEF_PATTERN_INFO(rx, framesize, FRAMESIZE)
 #endif
 
 MODULE = re::engine::PCRE2	PACKAGE = re::engine::PCRE2	PREFIX = PCRE2_
@@ -579,28 +583,22 @@ PPCODE:
 
 U32
 PCRE2__alloptions(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2__argoptions(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_backrefmax(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_bsr(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_capturecount(REGEXP *rx)
-PROTOTYPE: $
 
 # returns a 256-bit table
 void
 firstbitmap(REGEXP *rx)
-PROTOTYPE: $
 CODE:
     char* table;
     regexp *re = RegSV(rx);
@@ -608,71 +606,68 @@ CODE:
     pcre2_pattern_info(ri, PCRE2_INFO_FIRSTBITMAP, table);
     if (table) {
         ST(0) = sv_2mortal(newSVpvn(table, 256/8));
+        XSRETURN(1);
     }
 
 U32
 PCRE2_firstcodetype(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_firstcodeunit(REGEXP *rx)
-PROTOTYPE: $
 
-U32
+void
+PCRE2_framesize(REGEXP *rx)
+PPCODE:
+#ifdef PCRE2_INFO_FRAMESIZE
+    mXPUSHu(PCRE2_framesize(rx));
+#else
+    XSRETURN_UNDEF;
+#endif
+
+void
 PCRE2_hasbackslashc(REGEXP *rx)
-PROTOTYPE: $
+PPCODE:
+#ifdef PCRE2_INFO_HASBACKSLASHC
+    mXPUSHu(PCRE2_hasbackslashc(rx));
+#else
+    XSRETURN_UNDEF;
+#endif
 
 U32
 PCRE2_hascrorlf(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_jchanged(REGEXP *rx)
-PROTOTYPE: $
 
 UV
 PCRE2_jitsize(REGEXP *rx)
-PROTOTYPE: $
 
 UV
 PCRE2_size(REGEXP *rx)
-PROTOTYPE: $
-
-UV
-PCRE2_framesize(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_lastcodetype(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_lastcodeunit(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_matchempty(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_matchlimit(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_maxlookbehind(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_minlength(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_namecount(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 PCRE2_nameentrysize(REGEXP *rx)
-PROTOTYPE: $
 
 #if 0
 
@@ -691,11 +686,9 @@ PPCODE:
 
 U32
 PCRE2_newline(REGEXP *rx)
-PROTOTYPE: $
 
 U32
 recursionlimit(REGEXP *rx)
-PROTOTYPE: $
 CODE:
     regexp *re = RegSV(rx);
     pcre2_code *ri = (pcre2_code *)re->pprivate;

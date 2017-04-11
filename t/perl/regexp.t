@@ -333,9 +333,9 @@ push @pcre_fail, (629)      if "$]" =~ /^5\.01[3-8]/;
 # codeblocks
 push @pcre_fail, (1770..1776, 1778, 1809) if "$]" =~ /^5\.01[56]/;
 push @pcre_fail, (1960..1962, 1966, 1987, 1989..1991)
-  if "$]" =~ /^5\.020/;
+  if "$]" =~ /^5\.0(19|20)/;
 push @pcre_fail, (1960..1962, 1966, 1987..1992, 1994, 1996)
-  if "$]" =~ /^5\.022/;
+  if "$]" =~ /^5\.02[12]/;
 # return in codeblock
 push @pcre_skip, (552,1753,1755,1758..1765)
   if $] >= 5.015007 and $] < 5.022; # syntax error crashes
@@ -347,6 +347,11 @@ my %skip_ver;
 $skip_ver{'5.015'} = 1684; # skip < 5.14, >= 1684
 $skip_ver{'5.021'} = 1896; # skip < 5.20, >= 1896
 $skip_ver{'5.026'} = 1981; # skip < 5.26, >= 1981
+my $pcre2ver = re::engine::PCRE2::config('VERSION');
+if ($pcre2ver =~ /^10\.[01]0/) {
+    diag("too old PCRE2 $pcre2ver, skipping 2 tests");
+    push @pcre_skip, (1957,1958); # skip old pcre2 versions which do crash
+}
 @pcre_fail{@pcre_fail} = ();
 @pcre_skip{@pcre_skip} = ();
 

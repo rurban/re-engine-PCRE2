@@ -39,7 +39,10 @@ Check with:
 Since re::engine::PCRE2 derives from the `Regexp` package, you can call
 compiled `qr//` objects with these methods.
 See [PCRE2 NATIVE API MATCH CONTEXT FUNCTIONS](http://www.pcre.org/current/doc/html/pcre2api.html#SEC5)
-and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/pcre2api.html#SEC22)
+and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/pcre2api.html#SEC22).
+
+With older library versions which do not support a particular info method, undef is returned.
+E.g. hasbackslashc and framesize.
 
 - match\_limit (RX, \[INT\])
 
@@ -131,13 +134,14 @@ and [INFORMATION ABOUT A COMPILED PATTERN](http://www.pcre.org/current/doc/html/
 - framesize (RX)
 
     Undocumented. Only available since pcre-10.24.
-    Returns 0 on older versions.
-    pcre2\_match() frame size (size of top\_bracket\*2 + heapframe + 2 words).
+    Returns undef on older versions.
+    The pcre2\_match() frame size.
 
 - hasbackslashc (RX)
 
     Return 1 if the pattern contains any instances of \\C, otherwise 0.
     Note that \\C is forbidden since perl 5.26 (?).
+    With an older pcre2 library undef might be returned.
 
 - hascrorlf (RX)
 
