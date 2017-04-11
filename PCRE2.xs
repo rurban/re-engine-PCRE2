@@ -198,13 +198,13 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         &errcode,     /* errors */
         &erroffset,   /* error offset */
 #ifdef USE_MATCH_CONTEXT
-        &compile_context
+        compile_context
 #else
         NULL
 #endif
     );
 
-    if (ridata->ri == NULL) {
+    if (!ridata->ri) {
         PCRE2_UCHAR buf[256];
         /* ignore matching errors. prefer the core error */
         if (errcode < 100) { /* Compile errors */
@@ -214,6 +214,8 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
                  (unsigned)erroffset, buf, errcode);
         }
         return Perl_re_compile(aTHX_ pattern, flags);
+    } else {
+        ridata->match_data = pcre2_match_data_create_from_pattern(ridata->ri, NULL);
     }
     /* pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) */
@@ -382,7 +384,6 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     I32 i;
     int have_jit;
     PCRE2_SIZE *ovector;
-    pcre2_match_data *match_data;
     regexp * re = RegSV(rx);
     struct re_engine_pcre2_data *ridata = re->pprivate;
     pcre2_code *ri = ridata->ri;
@@ -391,13 +392,10 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
        pattern was not compiled as utf8 aware, we'd need to recompile
        it here. See GH #15 */
 
-    match_data = pcre2_match_data_create_from_pattern(ri, NULL);
-
     pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) {
 #ifdef USE_MATCH_CONTEXT
-        /* no compile_context yet */
-        match_context = pcre2_match_context_create(compile_context);
+        match_context = pcre2_match_context_create(NULL);
         /* default MATCH_LIMIT: 10000000 - uint32_t,
            but even 5120000000 is not big enough for the core test suite */
         /*pcre2_set_match_limit(match_context, 5120000000);*/
@@ -414,7 +412,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
             re->intflags & PUBLIC_JIT_MATCH_OPTIONS,
-            match_data,           /* block for storing the result */
+            ridata->match_data,           /* block for storing the result */
             match_context
         );
     } else {
@@ -434,14 +432,13 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             strend - strbeg,      /* length */
             stringarg - strbeg,   /* offset */
             re->intflags & PUBLIC_MATCH_OPTIONS,
-            match_data,           /* block for storing the result */
+            ridata->match_data,           /* block for storing the result */
             match_context
         );
     }
 
     /* Matching failed */
     if (rc < 0) {
-        pcre2_match_data_free(match_data);
 #ifdef USE_MATCH_CONTEXT
         if (have_jit && match_context)
             pcre2_match_context_free(match_context);
@@ -457,8 +454,8 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     re->subbeg = strbeg;
     re->sublen = strend - strbeg;
 
-    rc = pcre2_get_ovector_count(match_data);
-    ovector = pcre2_get_ovector_pointer(match_data);
+    rc = pcre2_get_ovector_count(ridata->match_data);
+    ovector = pcre2_get_ovector_pointer(ridata->match_data);
     DEBUG_r(PerlIO_printf(Perl_debug_log,
         "PCRE2 match \"%.*s\" =~ /%s/: found %d matches\n",
         (int)re->sublen, strbeg, RX_WRAPPED(rx), rc-1));
@@ -477,7 +474,6 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     }
 
     /* XXX: nparens needs to be set to CAPTURECOUNT */
-    pcre2_match_data_free(match_data);
 #ifdef USE_MATCH_CONTEXT
     if (have_jit && match_context)
         pcre2_match_context_free(match_context);
@@ -520,6 +516,7 @@ PCRE2_free(pTHX_ REGEXP * const rx)
     struct re_engine_pcre2_data *ridata = re->pprivate;
     pcre2_code *ri = ridata->ri;
     pcre2_code_free(ri);
+    pcre2_match_data_free(ridata->match_data);
     free(ridata);
 }
 

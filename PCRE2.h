@@ -61,4 +61,5 @@ const regexp_engine pcre2_engine = {
 
 struct re_engine_pcre2_data {
     pcre2_code *ri;
+    pcre2_match_data *match_data;
 };
