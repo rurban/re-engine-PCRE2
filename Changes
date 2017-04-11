@@ -1,5 +1,6 @@
 Revision history for re::engine::PCRE2
 
+    - Support /g anchors: bypass PCRE2, fallback to core.
     - t/perl/regexp.t: Support testing single tests,
       Support --core argument without loading PCRE2.
 

@@ -102,6 +102,20 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     else if (plen == 3 && strnEQ("\\s+", exp, 3))
         extflags |= RXf_WHITE;
 
+    /* bypass anchors for now. needs the 4 ->substrs buffers. */
+    if
+#ifdef RXf_IS_ANCHORED
+        (flags & RXf_IS_ANCHORED) /* => 5.20 */
+#else
+        (flags & (RXf_ANCH|RXf_ANCH_GPOS))
+#endif
+    {
+        /* options |= PCRE2_ANCHORED; */ /* no \g anchors yet */
+        DEBUG_r(PerlIO_printf(Perl_debug_log,
+            "anchored \"\\g\" at 0 fallback to core\n"));
+        return Perl_re_compile(aTHX_ pattern, flags);
+    }
+
     /* Perl modifiers to PCRE2 flags, /s is implicit and /p isn't used
      * but they pose no problem so ignore them */
     /* qr// stringification, TODO: (?flags:pattern) */
@@ -166,7 +180,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         }
     }
 #endif
-    /* TODO: l d g c */
+    /* TODO: l d c */
 
     /* The pattern is known to be UTF-8. Perl wouldn't turn this on unless it's
      * a valid UTF-8 sequence so tell PCRE2 not to check for that */
@@ -270,10 +284,11 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
   /a(?{$a=2;$b=3;($b)=$a})b/ =>
   expr: list - const 'a' + getvars + const '(?{$a=2;$b=3;($b)=$a})' + const 'b'
  */
-REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
-                       OP *expr, const struct regexp_engine* eng,
-                       REGEXP *old_re,
-                       bool *is_bare_re, U32 orig_rx_flags, U32 pm_flags)
+REGEXP*
+PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
+              OP *expr, const struct regexp_engine* eng,
+              REGEXP *old_re,
+              bool *is_bare_re, U32 orig_rx_flags, U32 pm_flags)
 {
     SV *pattern = NULL;
     if (!patternp) {

@@ -1,5 +1,5 @@
 package re::engine::PCRE2;
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 our $XS_VERSION = $VERSION;
 $VERSION = eval $VERSION;
 

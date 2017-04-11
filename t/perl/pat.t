@@ -140,7 +140,7 @@ $_ = "now is the time for all good men to come to.";
 @words = /(\w+)/g;
 print join(':',@words) eq "now:is:the:time:for:all:good:men:to:come:to"
     ? "ok 44\n"
-    : "not ok 44 #TODO /g\n";
+    : "not ok 44 #TODO /g [GH #2]\n";
 
 @words = ();
 while (/\w+/g) {
