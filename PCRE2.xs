@@ -726,13 +726,19 @@ U32
 recursionlimit(REGEXP *rx, U32 value=0)
 CODE:
     if (items == 2 && match_context)
+        /* name changed from set_recursion_limit at Mar 12 2017 with 10.30 */
+#if PCRE2_MINOR>=30 && defined(pcre2_code_copy_with_tables)
         pcre2_set_depth_limit(match_context, (PCRE2_SIZE)value);
+#else
+        pcre2_set_recursion_limit(match_context, (PCRE2_SIZE)value);
+#endif
     RETVAL = PCRE2_recursionlimit(rx);
     if (RETVAL == (U32)-1)
         XSRETURN_UNDEF;
 OUTPUT:
     RETVAL
 
+# better check with rx->alloptions & PCRE2_USE_OFFSET_LIMIT
 U32
 offsetlimit(U32 value=0)
 CODE:

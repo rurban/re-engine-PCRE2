@@ -27,6 +27,30 @@ eval 'use Devel::CheckLib;' and
       libpath => "$prefix/lib"
     ) : ());
 
+# fixup darwin macports usr vs opt precedence. /usr/local/include vs /usr/local/lib
+my $ccflags = $Config{ccflags};
+my $ldflags = $Config{ldflags};
+my $lddlflags = $Config{lddlflags};
+if ($lddlflags =~ m| -L/opt/local/lib| and $ccflags =~ m| -I/opt/local/include|) {
+    # opt first?
+    if ($lddlflags =~ m| -L/opt/local/lib.*-L/usr/local/lib|
+        and $ccflags =~ m| -I/usr/local/include.*-I/opt/local/include|)
+    {
+        warn("Your perl has corrupt /opt/local vs /usr/local precedence!\n");
+        warn("include prefers /usr/local, but lib /opt/local\n");
+        warn("Fixing it up for you...\n");
+        $lddlflags =~ s|(-L/opt/local/lib.*)(-L/usr/local/lib)|$2 $1|;
+        if ($ldflags =~ m| -L/opt/local/lib.*-L/usr/local/lib|) {
+            $ldflags =~ s|(-L/opt/local/lib.*)(-L/usr/local/lib)|$2 $1|;
+        }
+    }
+}
+if ($prefix) {
+    $ccflags   = "-I$prefix/include $ccflags";
+    $lddlflags = "-I$prefix/lib $lddlflags";
+    $ldflags   = "-I$prefix/lib $ldflags";
+}
+
 my %WriteMakefileArgs = (
   'NAME'         => 're::engine::PCRE2',
   'VERSION_FROM' => 'PCRE2.pm',
@@ -58,10 +82,9 @@ my %WriteMakefileArgs = (
     SUFFIX	=> '.gz',
   },
   'EXE_FILES' => [],
-  ($prefix
-   ? ('CCFLAGS'   => "$Config{ccflags} -I$prefix/include",
-      'LDDLFLAGS' => "$Config{lddlflags} -I$prefix/lib")
-   : ()),
+  'CCFLAGS'   => $ccflags,
+  'LDDLFLAGS' => $lddlflags,
+  'LDFLAGS'   => $ldflags,
   'LIBS'    => ($prefix ? [ "-L$prefix/lib", '-lpcre2-8' ] : [ '-lpcre2-8' ]),
   'LICENSE' => 'perl',
   'META_MERGE' => {
