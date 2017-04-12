@@ -56,13 +56,17 @@ use Test::More;
 # test individual tests, e.g. line 1840:
 #   perl -Mblib t/perl/regexp.t 1 t/perl/re_tests 1840 1843 ...
 # benchmarking:
+#   time perl -Mblib t/perl/regexp.t 10000 --core >/dev/null
+# vs
 #   time perl -Mblib t/perl/regexp.t 10000 >/dev/null
 
 my $iters = shift || 1;	# Poor man performance suite, 10000 is OK.
-my $file = shift;
+my $file = shift;       # or --core
 my $num = shift;
 if (defined $file) {
-    open TESTS, $file or die "Can't open $file";
+    if ($file ne '--core') {
+        open TESTS, $file or die "Can't open $file";
+    }
 }
 
 sub _comment {
@@ -93,11 +97,13 @@ use warnings FATAL=>"all";
 # to be overridden by other core tests:
 use vars qw($bang $ffff $nulnul $OP);
 use vars qw($skip_amp $qr $qr_embed); # set by our callers
-use re::engine::PCRE2 ();  # simply disable for benchmarks and regression tests
+if (!defined $file or $file ne '--core') {
+    require re::engine::PCRE2; # for benchmarks and regression tests
+}
 use re 'eval';
 use Data::Dumper;
 
-if (!defined $file) {
+if (!defined $file or $file eq '--core') {
     open(TESTS,'t/perl/re_tests') || open(TESTS,'re_tests') || open(TESTS,'t/re_tests')
       || die "Can't open t/perl/re_tests: $!";
 }
@@ -356,10 +362,12 @@ my %skip_ver;
 $skip_ver{'5.015'} = 1684; # skip < 5.14, >= 1684
 $skip_ver{'5.021'} = 1896; # skip < 5.20, >= 1896
 $skip_ver{'5.026'} = 1981; # skip < 5.26, >= 1981
-my $pcre2ver = re::engine::PCRE2::config('VERSION');
-if ($pcre2ver =~ /^10\.[01]0/) {
-    diag("too old PCRE2 $pcre2ver, skipping 2 tests");
-    push @pcre_skip, (1957,1958); # skip old pcre2 versions which do crash
+if ($INC{'re/engine/PCRE2.pm'}) {
+    my $pcre2ver = re::engine::PCRE2::config('VERSION');
+    if ($pcre2ver =~ /^10\.[01]0/) {
+        diag("too old PCRE2 $pcre2ver, skipping 2 tests");
+        push @pcre_skip, (1957,1958); # skip old pcre2 versions which do crash
+    }
 }
 if (!$num) {
     @pcre_fail{@pcre_fail} = ();
