@@ -57,7 +57,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 {
     REGEXP *rx;
     regexp *re;
-    struct re_engine_pcre2_data *ridata = malloc(sizeof(struct re_engine_pcre2_data));
+    struct re_engine_pcre2_data *ridata = calloc(1, sizeof(struct re_engine_pcre2_data));
 
     STRLEN plen;
     char  *exp = SvPV((SV*)pattern, plen);
@@ -406,6 +406,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
    (PCRE2_NO_UTF_CHECK|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY|\
     PCRE2_NOTEMPTY_ATSTART|PCRE2_PARTIAL_SOFT|PCRE2_PARTIAL_HARD)
 
+        assert(ridata->match_data);
         rc = (I32)pcre2_jit_match(
             ri,
             (PCRE2_SPTR8)stringarg,
@@ -420,6 +421,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         DEBUG_r(PerlIO_printf(Perl_debug_log,
             "PCRE2 skip jit match \"%.*s\" =~ /%s/\n",
             (int)re->sublen, strbeg, RX_WRAPPED(rx)));
+        assert(ridata->match_data);
 
 #define PUBLIC_MATCH_OPTIONS                                            \
   (PCRE2_ANCHORED|PCRE2_ENDANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
