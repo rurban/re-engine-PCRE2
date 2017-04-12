@@ -234,8 +234,8 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #else
     RX_WRAPPED(rx) = savepvn(SvPVX(wrapped), SvCUR(wrapped));
     RX_WRAPLEN(rx) = SvCUR(wrapped);
-    DEBUG_r(sv_dump((SV*)rx));
 #endif
+    DEBUG_r(sv_dump((SV*)rx));
 
 #if PERL_VERSION == 10
     /* Preserve a copy of the original pattern */
@@ -282,9 +282,14 @@ REGEXP*  PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
         for (; !o || OP_CLASS(o) != OA_SVOP; o = o->op_next) ;
         if (o && OP_CLASS(o) == OA_SVOP) {
             /* having a single const op only? */
-            if (o->op_next == o || o->op_next->op_type == OP_LIST)
+            if (o->op_next == o || o->op_next->op_type == OP_LIST) {
                 pattern = cSVOPx_sv(o);
+                DEBUG_r(PerlIO_printf(Perl_debug_log,
+                    "PCRE2 op_comp: single const op \"%" SVf "\"\n", SVfARG(pattern)));
+            }
             else { /* no, fallback to core with codeblocks */
+                DEBUG_r(PerlIO_printf(Perl_debug_log,
+                    "PCRE2 op_comp: codeblock. fallback to core\n"));
                 return Perl_re_op_compile
                     (aTHX_ patternp, pat_count, expr,
                      &PL_core_reg_engine,
@@ -352,6 +357,10 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         );
     } else {
 
+        DEBUG_r(PerlIO_printf(Perl_debug_log,
+            "PCRE2 skip jit match \"%.*s\" =~ /%s/\n",
+            re->sublen, strbeg, RX_WRAPPED(rx)));
+
 #define PUBLIC_MATCH_OPTIONS                                            \
   (PCRE2_ANCHORED|PCRE2_ENDANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
    PCRE2_NOTEMPTY_ATSTART|PCRE2_NO_UTF_CHECK|PCRE2_PARTIAL_HARD| \
@@ -392,9 +401,16 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
     rc = pcre2_get_ovector_count(match_data);
     ovector = pcre2_get_ovector_pointer(match_data);
+    DEBUG_r(PerlIO_printf(Perl_debug_log,
+        "PCRE2 match \"%.*s\" =~ /%s/: found %d matches\n",
+        re->sublen, strbeg, RX_WRAPPED(rx), rc-1));
     for (i = 0; i < rc; i++) {
         re->offs[i].start = ovector[i * 2];
         re->offs[i].end   = ovector[i * 2 + 1];
+        DEBUG_r(PerlIO_printf(Perl_debug_log,
+            "match[%d]: \"%.*s\" [%d,%d]\n",
+            i, re->offs[i].end - re->offs[i].start, &stringarg[re->offs[i].start],
+            re->offs[i].start, re->offs[i].end));
     }
 
     for (i = rc; i <= re->nparens; i++) {
