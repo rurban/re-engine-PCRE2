@@ -174,6 +174,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
         options |= (PCRE2_UTF|PCRE2_NO_UTF_CHECK);
 
+compile:
     ri = pcre2_compile(
         (PCRE2_SPTR8)exp, plen,    /* pattern */
         options,      /* options */
@@ -186,18 +187,30 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
     );
 
-    if (ri == NULL) {
+    if (!ri) {
+        /* character code point value in \x{} or \o{} is too large */
+        if (errcode == 134 && !(options & PCRE2_UTF)) {
+            options |= PCRE2_UTF;
+            goto compile;
+        }
+    }
+    if (!ri) {
         PCRE2_UCHAR buf[256];
+        pcre2_get_error_message(errcode, buf, sizeof(buf));
         /* ignore matching errors. prefer the core error */
         if (errcode < 100) { /* Compile errors */
-            pcre2_get_error_message(errcode, buf, sizeof(buf));
 #if PERL_VERSION > 10
-            Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
+            Perl_ck_warner
 #else
-            Perl_warner(aTHX_ packWARN(WARN_REGEXP),
+            Perl_warner
 #endif
-                        "PCRE2 compilation failed at offset %u: %s (%d)\n",
-                        (unsigned)erroffset, buf, errcode);
+                (aTHX_ packWARN(WARN_REGEXP),                           
+                 "PCRE2 compilation failed at offset %u: %s (%d)\n",
+                 (unsigned)erroffset, buf, errcode);
+#ifdef DEBUGGING
+        } else {
+            sv_setpvn(GvSVn(PL_errgv), buf, strlen(buf));
+#endif
         }
         return Perl_re_compile(aTHX_ pattern, flags);
     }
@@ -354,8 +367,8 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     } else {
 
         DEBUG_r(PerlIO_printf(Perl_debug_log,
-            "PCRE2 skip jit match \"%.*s\" =~ /%s/\n",
-            (int)re->sublen, strbeg, RX_WRAPPED(rx)));
+            "PCRE2 skip jit match \"%.*s\"%s =~ /%s/\n",
+            (int)re->sublen, strbeg, sv&&SvUTF8(sv) ? "[U]": "", RX_WRAPPED(rx)));
 
 #define PUBLIC_MATCH_OPTIONS                                            \
   (PCRE2_ANCHORED|PCRE2_ENDANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
@@ -394,8 +407,9 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     rc = pcre2_get_ovector_count(match_data);
     ovector = pcre2_get_ovector_pointer(match_data);
     DEBUG_r(PerlIO_printf(Perl_debug_log,
-        "PCRE2 match \"%.*s\" =~ /%s/: found %d matches\n",
-        (int)re->sublen, strbeg, RX_WRAPPED(rx), rc-1));
+        "PCRE2 match \"%.*s\"%s =~ /%s/%s: found %d matches\n",
+        (int)re->sublen, strbeg, sv&&SvUTF8(sv)?"[u]":"", RX_WRAPPED(rx),
+        re->intflags & PCRE2_UTF ? "[u]" : "", rc-1));
     for (i = 0; i < rc; i++) {
         re->offs[i].start = ovector[i * 2];
         re->offs[i].end   = ovector[i * 2 + 1];
