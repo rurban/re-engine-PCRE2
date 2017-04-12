@@ -1,5 +1,7 @@
 Revision history for re::engine::PCRE2
 
+    - t/perl/regexp.t: Support testing single tests
+
 0.10 Wed Apr 12 10:06:21 2017 +0200 rurban
 
     - Add the new heaplimit method and config option.

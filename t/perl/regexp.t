@@ -53,15 +53,16 @@ use Test::More;
 # \x... and \o{...} constants are automatically converted to the native
 # character set if necessary.  \[0-7] constants aren't
 
-my $file;
-BEGIN {
-    $iters = shift || 1;	# Poor man performance suite, 10000 is OK.
+# test individual tests, e.g. line 1840:
+#   perl -Mblib t/perl/regexp.t 1 t/perl/re_tests 1840 1843 ...
+# benchmarking:
+#   time perl -Mblib t/perl/regexp.t 10000 >/dev/null
 
-    # Do this open before any chdir
-    $file = shift;
-    if (defined $file) {
-	open TESTS, $file or die "Can't open $file";
-    }
+my $iters = shift || 1;	# Poor man performance suite, 10000 is OK.
+my $file = shift;
+my $num = shift;
+if (defined $file) {
+    open TESTS, $file or die "Can't open $file";
 }
 
 sub _comment {
@@ -89,7 +90,8 @@ sub convert_from_ascii {
 
 use strict;
 use warnings FATAL=>"all";
-use vars qw($iters $numtests $bang $ffff $nulnul $OP);
+# to be overridden by other core tests:
+use vars qw($bang $ffff $nulnul $OP);
 use vars qw($skip_amp $qr $qr_embed); # set by our callers
 use re::engine::PCRE2 ();  # simply disable for benchmarks and regression tests
 use re 'eval';
@@ -101,8 +103,16 @@ if (!defined $file) {
 }
 
 my @tests = <TESTS>;
-
 close TESTS;
+
+if ($num) {
+    my @t;
+    push @t, $tests[$num-1];
+    while ($num = shift @ARGV) {
+        push @t, $tests[$num-1];
+    }
+    @tests = @t;
+}
 
 $bang = sprintf "\\%03o", ord "!"; # \41 would not be portable.
 $ffff  = chr(0xff) x 2;
@@ -113,7 +123,6 @@ $| = 1;
 printf "1..%d\n# $iters iterations\n", scalar @tests;
 my $test;
 my $skip_rest;
-
 
 # Tests known to fail under PCRE2
 my (@pcre_fail, %pcre_fail, @pcre_skip, %pcre_skip);
@@ -352,8 +361,10 @@ if ($pcre2ver =~ /^10\.[01]0/) {
     diag("too old PCRE2 $pcre2ver, skipping 2 tests");
     push @pcre_skip, (1957,1958); # skip old pcre2 versions which do crash
 }
-@pcre_fail{@pcre_fail} = ();
-@pcre_skip{@pcre_skip} = ();
+if (!$num) {
+    @pcre_fail{@pcre_fail} = ();
+    @pcre_skip{@pcre_skip} = ();
+}
 
 TEST:
 foreach (@tests) {
