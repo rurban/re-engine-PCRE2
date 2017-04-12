@@ -482,36 +482,40 @@ PCRE2_make_nametable(regexp * const re, pcre2_code * const ri, const I32 namecou
 
     for (i = 0; i < namecount; i++) {
         const char *key = (char*)tabptr + 2;
-        int npar = (tabptr[0] << 8) | tabptr[1];
-        SV *sv_dat = *hv_fetch(re->paren_names, key, strlen(key), TRUE);
+        I32 npar = (tabptr[0] << 8) | tabptr[1]; /* the groupno (little endian only?) */
+        SV *sv = *hv_fetch(re->paren_names, key, strlen(key), TRUE);
 
-        if (!sv_dat)
+        if (!sv)
             Perl_croak(aTHX_ "panic: paren_name hash element allocation failed");
 
-        if (!SvPOK(sv_dat)) {
+        if (!SvPOK(sv)) {
             /* The first (and maybe only) entry with this name */
-            (void)SvUPGRADE(sv_dat, SVt_PVNV);
-            sv_setpvn(sv_dat, (char *)&(npar), sizeof(I32));
-            SvIOK_on(sv_dat);
-            SvIVX(sv_dat) = 1;
+            (void)SvUPGRADE(sv, SVt_PVIV);
+            /* buffer of I32 groupno */
+            sv_setpvn(sv, (char *)&(npar), sizeof(I32));
+            SvIOK_on(sv);
+            SvIVX(sv) = 1;
         } else {
-            /* An entry under this name has appeared before, append */
-            IV count = SvIV(sv_dat);
-            I32 *pv = (I32*)SvPVX(sv_dat);
+            /* duplicate names: An entry under this name has appeared before, append */
+            IV count = SvIV(sv);
+            STRLEN len = SvCUR(sv);
+            I32 *pv = (I32*)SvPVX_const(sv);
             IV j;
 
-            for (j = 0 ; j < count ; j++) {
-                if (pv[i] == npar) {
+            assert(count < namecount);
+            assert(count <= len*sizeof(I32));
+            for (j = 0; j < count; j++) {
+                if (pv[j] == npar) {
                     count = 0;
                     break;
                 }
             }
 
             if (count) {
-                pv = (I32*)SvGROW(sv_dat, SvCUR(sv_dat) + sizeof(I32)+1);
-                SvCUR_set(sv_dat, SvCUR(sv_dat) + sizeof(I32));
+                pv = (I32*)SvGROW(sv, len + sizeof(I32)+1);
+                SvCUR_set(sv, len + sizeof(I32));
                 pv[count] = npar;
-                SvIVX(sv_dat)++;
+                SvIVX(sv)++;
             }
         }
 
@@ -588,6 +592,18 @@ PPCODE:
     mXPUSHs(newSViv(PTR2IV(&pcre2_engine)));
 
 # pattern options
+
+#if 0
+
+void
+debug(REGEXP *rx, bool print_lengths=1)
+CODE:
+    regexp *re = RegSV(rx);
+    pcre2_code *ri = (pcre2_code *)re->pprivate;
+    FILE *f = stdout;
+    pcre2_printint_8(ri,f,print_lengths);
+
+#endif
 
 U32
 PCRE2__alloptions(REGEXP *rx)
