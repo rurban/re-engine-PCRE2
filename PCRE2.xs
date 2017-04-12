@@ -355,7 +355,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
         DEBUG_r(PerlIO_printf(Perl_debug_log,
             "PCRE2 skip jit match \"%.*s\" =~ /%s/\n",
-            re->sublen, strbeg, RX_WRAPPED(rx)));
+            (int)re->sublen, strbeg, RX_WRAPPED(rx)));
 
 #define PUBLIC_MATCH_OPTIONS                                            \
   (PCRE2_ANCHORED|PCRE2_ENDANCHORED|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY| \
@@ -395,14 +395,14 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     ovector = pcre2_get_ovector_pointer(match_data);
     DEBUG_r(PerlIO_printf(Perl_debug_log,
         "PCRE2 match \"%.*s\" =~ /%s/: found %d matches\n",
-        re->sublen, strbeg, RX_WRAPPED(rx), rc-1));
+        (int)re->sublen, strbeg, RX_WRAPPED(rx), rc-1));
     for (i = 0; i < rc; i++) {
         re->offs[i].start = ovector[i * 2];
         re->offs[i].end   = ovector[i * 2 + 1];
         DEBUG_r(PerlIO_printf(Perl_debug_log,
             "match[%d]: \"%.*s\" [%d,%d]\n",
-            i, re->offs[i].end - re->offs[i].start, &stringarg[re->offs[i].start],
-            re->offs[i].start, re->offs[i].end));
+            i, (int)(re->offs[i].end - re->offs[i].start), &stringarg[re->offs[i].start],
+            (int)re->offs[i].start, (int)re->offs[i].end));
     }
 
     for (i = rc; i <= re->nparens; i++) {
