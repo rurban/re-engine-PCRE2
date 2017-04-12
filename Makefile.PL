@@ -138,7 +138,6 @@ README.md : \$(VERSION_FROM)
 	pod2markdown \$(VERSION_FROM) > \$@
 
 release : dist
-	echo git commit -a -m\"release \$(VERSION)\"
 	git tag \$(VERSION)
 	cpan-upload \$(DISTVNAME).tar\$(SUFFIX)
 	git push

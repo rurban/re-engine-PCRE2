@@ -1,7 +1,13 @@
 Revision history for re::engine::PCRE2
 
+0.10 Wed Apr 12 10:06:21 2017 +0200 rurban
+
     - Add the new heaplimit method and config option.
     - Fixed make_nametable heap-buffer-overflow (#10)
+    - Fixup macports usr vs opt precedence
+    - Harmonize the match context names: use the same method name
+    for pattern and match_context fields. Some values are stored locally in the
+    pattern, some globally in the match context, and some are build-time defaults.
 
 0.09 Tue Apr 11 13:49:30 2017 +0200 rurban
 
