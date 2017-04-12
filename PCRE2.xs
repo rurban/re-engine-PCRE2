@@ -14,7 +14,7 @@
 #endif
 #include "PCRE2.h"
 #include "regcomp.h"
-#undef USE_MATCH_CONTEXT
+#define USE_MATCH_CONTEXT
 
 #ifndef strEQc
 # define strEQc(s, c) strEQ(s, ("" c ""))
@@ -841,14 +841,11 @@ OUTPUT:
 
 # better check with rx->alloptions & PCRE2_USE_OFFSET_LIMIT
 U32
-offsetlimit(U32 value=0)
+offsetlimit(REGEXP *rx, U32 value)
 CODE:
     if (match_context) {
-        if (items == 1)
-            pcre2_set_offset_limit(match_context, (PCRE2_SIZE)value);
-#ifdef USE_MATCH_CONTEXT
-        RETVAL = match_context->offset_limit;
-#endif
+        pcre2_set_offset_limit(match_context, (PCRE2_SIZE)value);
+        RETVAL = (U32)value;
     } else {
         XSRETURN_UNDEF;
     }
