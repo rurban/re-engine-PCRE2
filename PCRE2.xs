@@ -132,10 +132,10 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         sv_catpvn(wrapped, "n", 1);
     }
 #endif
+    /* since 5.14: */
 #ifdef RXf_PMf_CHARSET
     if (flags & RXf_PMf_CHARSET) {
-      regex_charset cs;
-      if ((cs = get_regex_charset(flags)) != REGEX_DEPENDS_CHARSET) {
+        regex_charset cs = get_regex_charset(flags);
         switch (cs) {
         case REGEX_UNICODE_CHARSET:
           options |= (PCRE2_UTF|PCRE2_NO_UTF_CHECK);
@@ -149,16 +149,18 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
           options |= PCRE2_NEVER_UTF; /* /aa */
           sv_catpvn(wrapped, "aa", 2);
           break;
-        default:
-#if PERL_VERSION > 10
+        case REGEX_DEPENDS_CHARSET:
+            /* /d old, problematic, pre-5.14 B<D>efault character set
+               behavior.  Its only use is to force that old behavior. */
+          break;
+        case REGEX_LOCALE_CHARSET:
+            /* /l sets the character set to that of whatever B<L>ocale is in
+               effect at the time of the execution of the pattern match. */
+            /* XXX PCRE2 maketables if necessary */
           Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
-#else
-          Perl_warner(aTHX_ packWARN(WARN_REGEXP),
-#endif
-                         "local charset option ignored by pcre2");
+               "/l local charset option ignored by pcre2");
           return Perl_re_compile(aTHX_ pattern, flags);
         }
-      }
     }
 #endif
     /* TODO: l d g c */
