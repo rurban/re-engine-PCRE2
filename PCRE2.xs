@@ -349,11 +349,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             stringarg - strbeg,   /* offset */
             re->intflags & PUBLIC_JIT_MATCH_OPTIONS,
             match_data,           /* block for storing the result */
-#ifdef USE_MATCH_CONTEXT
             match_context
-#else
-            NULL
-#endif
         );
     } else {
 
@@ -373,11 +369,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
             stringarg - strbeg,   /* offset */
             re->intflags & PUBLIC_MATCH_OPTIONS,
             match_data,           /* block for storing the result */
-#ifdef USE_MATCH_CONTEXT
             match_context
-#else
-            NULL
-#endif
         );
     }
 
