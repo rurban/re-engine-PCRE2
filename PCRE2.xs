@@ -22,6 +22,9 @@
 #ifndef PERL_STATIC_INLINE
 # define PERL_STATIC_INLINE static
 #endif
+#if PERL_VERSION <= 10
+#define Perl_ck_warner Perl_warner
+#endif
 
 static char retbuf[64];
 
@@ -191,13 +194,9 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         /* ignore matching errors. prefer the core error */
         if (errcode < 100) { /* Compile errors */
             pcre2_get_error_message(errcode, buf, sizeof(buf));
-#if PERL_VERSION > 10
             Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
-#else
-            Perl_warner(aTHX_ packWARN(WARN_REGEXP),
-#endif
-                        "PCRE2 compilation failed at offset %u: %s (%d)\n",
-                        (unsigned)erroffset, buf, errcode);
+                 "PCRE2 compilation failed at offset %u: %s (%d)\n",
+                 (unsigned)erroffset, buf, errcode);
         }
         return Perl_re_compile(aTHX_ pattern, flags);
     }
