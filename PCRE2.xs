@@ -192,6 +192,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 #endif
         options |= (PCRE2_UTF|PCRE2_NO_UTF_CHECK);
 
+ compile:
     ridata->ri = pcre2_compile(
         (PCRE2_SPTR8)exp, plen,    /* pattern */
         options,      /* options */
@@ -205,13 +206,24 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     );
 
     if (!ridata->ri) {
+        /* character code point value in \x{} or \o{} is too large */
+        if (errcode == 134 && !(options & PCRE2_UTF)) {
+            options |= PCRE2_UTF; /* but do check utf8 */
+            goto compile;
+        }
+    }
+    if (!ridata->ri) {
         PCRE2_UCHAR buf[256];
+        pcre2_get_error_message(errcode, buf, sizeof(buf));
         /* ignore matching errors. prefer the core error */
         if (errcode < 100) { /* Compile errors */
-            pcre2_get_error_message(errcode, buf, sizeof(buf));
             Perl_ck_warner(aTHX_ packWARN(WARN_REGEXP),
                  "PCRE2 compilation failed at offset %u: %s (%d)\n",
                  (unsigned)erroffset, buf, errcode);
+#ifdef DEBUGGING
+        } else {
+            sv_setpvn(GvSVn(PL_errgv), buf, strlen(buf));
+#endif
         }
         return Perl_re_compile(aTHX_ pattern, flags);
     } else {
@@ -420,7 +432,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
         DEBUG_r(PerlIO_printf(Perl_debug_log,
             "PCRE2 skip jit match \"%.*s\" =~ /%s/\n",
-            (int)re->sublen, strbeg, RX_WRAPPED(rx)));
+            (int)re->sublen, strbeg, sv&&SvUTF8(sv) ? "[U]": "", RX_WRAPPED(rx)));
         assert(ridata->match_data);
 
 #define PUBLIC_MATCH_OPTIONS                                            \
@@ -459,8 +471,9 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     rc = pcre2_get_ovector_count(ridata->match_data);
     ovector = pcre2_get_ovector_pointer(ridata->match_data);
     DEBUG_r(PerlIO_printf(Perl_debug_log,
-        "PCRE2 match \"%.*s\" =~ /%s/: found %d matches\n",
-        (int)re->sublen, strbeg, RX_WRAPPED(rx), rc-1));
+        "PCRE2 match \"%.*s\"%s =~ /%s/%s: found %d matches\n",
+        (int)re->sublen, strbeg, sv&&SvUTF8(sv)?"[U]":"", RX_WRAPPED(rx),
+        re->intflags & PCRE2_UTF ? "[U]" : "", rc-1));
     for (i = 0; i < rc; i++) {
         re->offs[i].start = ovector[i * 2];
         re->offs[i].end   = ovector[i * 2 + 1];
