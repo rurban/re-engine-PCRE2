@@ -313,7 +313,10 @@ PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
     } else {
         pattern = *patternp;
     }
-    return PCRE2_comp(aTHX_ pattern, orig_rx_flags);
+    DEBUG_r(PerlIO_printf(Perl_debug_log,
+        "PCRE2 op_comp: \"%" SVf "\" 0x%x 0x%x\n", SVfARG(pattern),
+        orig_rx_flags, pm_flags));
+    return PCRE2_comp(aTHX_ pattern, orig_rx_flags?orig_rx_flags:pm_flags);
 }
 #endif
 
