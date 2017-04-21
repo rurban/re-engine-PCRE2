@@ -6,7 +6,7 @@ use Config;
 
 my $prefix;
 if (@ARGV) { # PREFIX=~
-  while (my $arg = shift @ARGV) {
+  for my $arg (@ARGV) {
     if ($arg =~ /^-?-?PREFIX=(.*)/i) {
       # lib and include prefix if installed locally (ie. travis)
       $prefix = $1;
