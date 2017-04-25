@@ -1,5 +1,12 @@
 Revision history for re::engine::PCRE2
 
+0.12
+
+    - fix Makefile.PL options handling (Petr Písař PR #20)
+    - fix some META data
+    - add PCRE2_EXTENDED_MORE /xx support (needs current pcre lib)
+    - Fix jitsize() (Petr Písař PR #23)
+
 0.11 Fri Apr 14 21:49:57 2017 +0200 rurban
 
     - Support \gG anchors: bypass PCRE2, fallback to core.
