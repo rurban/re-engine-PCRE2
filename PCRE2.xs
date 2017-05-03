@@ -286,6 +286,8 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 /* code blocks are extracted like this:
   /a(?{$a=2;$b=3;($b)=$a})b/ =>
   expr: list - const 'a' + getvars + const '(?{$a=2;$b=3;($b)=$a})' + const 'b'
+
+  TODO: pat_count > 1 and !expr (t/variable_expand.t)
  */
 REGEXP*
 PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
@@ -313,6 +315,13 @@ PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
                      old_re, is_bare_re, orig_rx_flags, pm_flags);
             }
         }
+    } else if (pat_count > 1) {
+        DEBUG_r(PerlIO_printf(Perl_debug_log,
+            "PCRE2 op_comp: multi pattern %d. fallback to core\n", pat_count));
+        return Perl_re_op_compile
+            (aTHX_ patternp, pat_count, expr,
+             &PL_core_reg_engine,
+             old_re, is_bare_re, orig_rx_flags, pm_flags);
     } else {
         pattern = *patternp;
     }

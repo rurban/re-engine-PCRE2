@@ -351,6 +351,8 @@ push @pcre_fail, (1960..1962, 1966, 1987, 1989..1991)
   if "$]" =~ /^5\.0(19|20)/;
 push @pcre_fail, (1960..1962, 1966, 1987..1992, 1994, 1996)
   if "$]" =~ /^5\.02[12]/;
+push @pcre_fail, (1992, 1994) # cperl only
+  if $] >= 5.026 and "$^V" =~ /^v5\.2[67]\.\dc/;
 # return in codeblock
 push @pcre_skip, (552,1753,1755,1758..1765)
   if $] >= 5.015007 and $] < 5.022; # syntax error crashes

@@ -1,7 +1,9 @@
 Revision history for re::engine::PCRE2
 
-0.12
+0.12 Wed May 3 09:47:57 2017 +0200 rurban
 
+    - fix op_comp multi patterns without optree, e.g. variable expansion.
+      test by Michael Haas (PR #25)
     - fix Makefile.PL options handling (Petr Písař PR #20)
     - fix some META data
     - add PCRE2_EXTENDED_MORE /xx support (needs current pcre lib)
