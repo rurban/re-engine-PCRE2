@@ -1,5 +1,9 @@
 Revision history for re::engine::PCRE2
 
+0.13 Thu May 4 13:48:53 2017 +0200 rurban
+
+    - Start handling multi-patterns (#26), like qr + $str + qr
+
 0.12 Wed May 3 09:47:57 2017 +0200 rurban
 
     - fix op_comp multi patterns without optree, e.g. variable expansion.

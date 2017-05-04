@@ -283,6 +283,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
 }
 
 #if PERL_VERSION >= 18
+
 /* code blocks are extracted like this:
   /a(?{$a=2;$b=3;($b)=$a})b/ =>
   expr: list - const 'a' + getvars + const '(?{$a=2;$b=3;($b)=$a})' + const 'b'
@@ -316,12 +317,42 @@ PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
             }
         }
     } else if (pat_count > 1) {
+        SV **svp;
+        SV *concat = newSVpvn_flags("",0,SVs_TEMP);
+        bool can_concat = TRUE; /* can we handle the concat patterns by ourselves? */
         DEBUG_r(PerlIO_printf(Perl_debug_log,
-            "PCRE2 op_comp: multi pattern %d. fallback to core\n", pat_count));
-        return Perl_re_op_compile
-            (aTHX_ patternp, pat_count, expr,
-             &PL_core_reg_engine,
-             old_re, is_bare_re, orig_rx_flags, pm_flags);
+            "PCRE2 op_comp: multi pattern nargs=%d\n", pat_count));
+        /* concat_pat problem: if all the members are ours (even core),
+           concat by ourselves. #26 */
+        for (svp = patternp; svp < patternp + pat_count; svp++) {
+            SV *sv = SvROK(*svp) ? SvRV(*svp) : *svp;
+            if (SvTYPE(sv) == SVt_REGEXP) {
+                bool is_ours = RX_ENGINE((REGEXP*)sv) == &pcre2_engine;
+                bool is_core = RX_ENGINE((REGEXP*)sv) == &PL_core_reg_engine;
+                const char *engine = is_core ? "core" : is_ours ? "pcre" : "plugin";
+                DEBUG_r(PerlIO_printf(Perl_debug_log,
+                                      "  %" SVf " <%s engine>\n", SVfARG(sv), engine));
+                if (!is_ours && !is_core) /* we can concat ours and core... */
+                    can_concat = FALSE;
+                if (can_concat)
+                    sv_catsv(concat, sv);
+                else if (!is_core) /* convert back to core for S_concat_pat */
+                    *svp = (SV*)re_compile(sv, pm_flags);
+            } else {
+                if (can_concat && SvPOK(sv))
+                    sv_catsv(concat, sv);
+                else
+                    can_concat = FALSE; /* ...but not others */
+                DEBUG_r(PerlIO_printf(Perl_debug_log,
+                                      "  %" SVf "\n", SVfARG(sv)));
+            }
+        }
+        if (can_concat)
+            pattern = concat;
+        else
+            return Perl_re_op_compile(aTHX_ patternp, pat_count, expr,
+                                      &PL_core_reg_engine,
+                                      old_re, is_bare_re, orig_rx_flags, pm_flags);
     } else {
         pattern = *patternp;
     }
