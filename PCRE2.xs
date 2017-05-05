@@ -707,7 +707,7 @@ CODE:
     char* table;
     regexp *re = RegSV(rx);
     pcre2_code *ri = (pcre2_code *)re->pprivate;
-    pcre2_pattern_info(ri, PCRE2_INFO_FIRSTBITMAP, table);
+    pcre2_pattern_info(ri, PCRE2_INFO_FIRSTBITMAP, &table);
     if (table) {
         ST(0) = sv_2mortal(newSVpvn(table, 256/8));
         XSRETURN(1);
