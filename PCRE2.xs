@@ -712,6 +712,7 @@ CODE:
         ST(0) = sv_2mortal(newSVpvn(table, 256/8));
         XSRETURN(1);
     }
+    XSRETURN_UNDEF;
 
 U32
 PCRE2_firstcodetype(REGEXP *rx)
