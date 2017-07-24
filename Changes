@@ -1,5 +1,10 @@
 Revision history for re::engine::PCRE2
 
+0.14
+
+    - Fallback to Alien:::PCRE2 if library not found
+    - Minor cleanups by ppisar
+
 0.13 Thu May 4 13:48:53 2017 +0200 rurban
 
     - Start handling multi-patterns (#26), like qr + $str + qr
