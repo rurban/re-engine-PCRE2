@@ -1837,7 +1837,7 @@ a?\R	a\n	y	$&	a\n
 
 # check we have the right utf8ness as we switch back and forth between
 # patterns
-^(\x{100}|a)(??{ qr/.?\xF7/d})	a_\xF7	y	-	-
+^(\x{100}|a)(??{ qr/.?\xF7/d})	a_\xF7	yp	-	-
 
 # [perl #118375]
 /(a|(bc)){0,0}?xyz/	xyz	y	$&	xyz
