@@ -299,7 +299,9 @@ my @pcre_fail_ignored = (
     
     # [perl 128420] recursive matches
     1976, # aa$|a(?R)a|a:aaa:y:$&:aaa => `a', match=1
-  
+
+    # /xx pcre2 10.30-RC1 regression
+    1992, 1994
   );
 
 # version-specifics, older perls:
