@@ -303,6 +303,9 @@ my @pcre_fail_ignored = (
     # /xx pcre2 10.30-RC1 regression
     1992, 1994
   );
+# uninitialized stack element st.reg_sv and subsequent heap-buffer-overflow #19
+# "a_\xF7" =~ /^(\x{100}|a)(??{ qr/.?\xF7/d})/
+push @pcre_skip, (1840);
 
 # version-specifics, older perls:
 push @pcre_fail, (
