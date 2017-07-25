@@ -34,10 +34,11 @@ static char retbuf[64];
 #define RegSV(p) (p)
 #endif
 
-static pcre2_match_context_8 *match_context = NULL;
+static pcre2_match_context *match_context = NULL;
 #ifdef USE_MATCH_CONTEXT
 static pcre2_jit_stack *jit_stack = NULL;
-static pcre2_compile_context_8 *compile_context = NULL;
+static pcre2_general_context *general_context = NULL;
+static pcre2_compile_context *compile_context = NULL;
 
 /* default is 32k already */
 static pcre2_jit_stack *get_jit_stack(void)
@@ -197,11 +198,7 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
         options,      /* options */
         &errcode,     /* errors */
         &erroffset,   /* error offset */
-#ifdef USE_MATCH_CONTEXT
         compile_context
-#else
-        NULL
-#endif
     );
 
     if (!ridata->ri) {
@@ -394,14 +391,6 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
     pcre2_config_8(PCRE2_CONFIG_JIT, &have_jit);
     if (have_jit) {
-#ifdef USE_MATCH_CONTEXT
-        /* no compile_context yet */
-        match_context = pcre2_match_context_create(compile_context);
-        /* default MATCH_LIMIT: 10000000 - uint32_t,
-           but even 5120000000 is not big enough for the core test suite */
-        /*pcre2_set_match_limit(match_context, 5120000000);*/
-        /*pcre2_jit_stack_assign(match_context, NULL, get_jit_stack());*/
-#endif
         /* Masks for identifying the public options that are permitted at match time. */
 #define PUBLIC_JIT_MATCH_OPTIONS \
    (PCRE2_NO_UTF_CHECK|PCRE2_NOTBOL|PCRE2_NOTEOL|PCRE2_NOTEMPTY|\
@@ -443,8 +432,8 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     /* Matching failed */
     if (rc < 0) {
 #ifdef USE_MATCH_CONTEXT
-        if (have_jit && match_context)
-            pcre2_match_context_free(match_context);
+        /*if (have_jit && match_context)
+          pcre2_match_context_free(match_context);*/
 #endif
         if (rc != PCRE2_ERROR_NOMATCH) {
             PCRE2_UCHAR buf[256];
@@ -478,8 +467,9 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
     /* XXX: nparens needs to be set to CAPTURECOUNT */
 #ifdef USE_MATCH_CONTEXT
-    if (have_jit && match_context)
-        pcre2_match_context_free(match_context);
+    /* TODO: do this in DESTROY */
+    /*if (have_jit && match_context)
+      pcre2_match_context_free(match_context);*/
 #endif
     return 1;
 }
@@ -921,3 +911,13 @@ PPCODE:
     RET_NO(HEAPLIMIT) else
 #endif
     Perl_croak(aTHX_ "Invalid config argument %s", opt);
+
+BOOT:
+#ifdef USE_MATCH_CONTEXT
+    match_context = pcre2_match_context_create(general_context);
+    /* default MATCH_LIMIT: 10000000 - uint32_t,
+       but even 5120000000 is not big enough for the core test suite */
+    /*pcre2_set_match_limit(match_context, 5120000000);*/
+    /*pcre2_jit_stack_assign(match_context, NULL, get_jit_stack());*/
+    compile_context = pcre2_compile_context_create(general_context);
+#endif
