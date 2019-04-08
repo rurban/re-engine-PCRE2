@@ -8,5 +8,5 @@ use re::engine::PCRE2;
 my $pid = fork;
 
 print "ok 1\n" if $pid;
-sleep 0.1;
+sleep 1;
 print "ok 2\n" unless $pid;
