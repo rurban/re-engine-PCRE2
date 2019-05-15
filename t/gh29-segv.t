@@ -8,8 +8,8 @@ use re::engine::PCRE2;
 my $pid = fork;
 
 if ($pid) {
-    print "not" if $pid != waitpid($pid, 0) or $?;
-    print "ok 2\n"
+    print ($pid != waitpid($pid, 0)
+      ? "not ok 2 # \$?: $? $!" : "ok 2\n");
 } else {
     print "ok 1\n";
 }
