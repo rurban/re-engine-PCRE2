@@ -1,0 +1,1 @@
+{"version":1,"ops":[{"type":1,"author":{"id":"5435141a73302fae7cf7a526794e1018ba2157ae"},"timestamp":1491472994,"metadata":{"github-id":"MDU6SXNzdWUyMTk4NDcyNDQ=","github-url":"https://github.com/rurban/re-engine-PCRE2/issues/6","origin":"github"},"title":"import should set compile and match contexts","message":"unimport undo them.\nrecursion limits and such.","files":null}]}
