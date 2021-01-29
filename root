@@ -1,0 +1,1 @@
+{"version":1,"ops":[{"type":1,"author":{"id":"5435141a73302fae7cf7a526794e1018ba2157ae"},"timestamp":1491397970,"metadata":{"github-id":"MDU6SXNzdWUyMTk1Nzc3NTc=","github-url":"https://github.com/rurban/re-engine-PCRE2/issues/2","origin":"github"},"title":"/g   (now only \u003c5.20)","message":"in `t/perl/pat.t` only the /g tests fail","files":null}]}
