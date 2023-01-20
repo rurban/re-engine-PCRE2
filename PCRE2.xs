@@ -3,6 +3,11 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#if PERL_VERSION > 36
+extern regexp_engine PL_core_reg_engine;
+extern REGEXP * Perl_re_op_compile(pTHX_ SV ** const patternp, int pat_count, OP *expr, const regexp_engine *eng, REGEXP *old_re, bool *is_bare_re, const U32 rx_flags, const U32 pm_flags);
+#endif
+
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 /* older versions: */
@@ -277,6 +282,11 @@ PCRE2_comp(pTHX_ SV * const pattern, U32 flags)
     (void)pcre2_pattern_info(ridata->ri, PCRE2_INFO_CAPTURECOUNT, &nparens);
     re->nparens = re->lastparen = re->lastcloseparen = nparens;
     Newxz(re->offs, nparens + 1, regexp_paren_pair);
+#if PERL_VERSION >= 37
+#  if PERL_VERSION_LE(5,37,8)
+    re->logical_nparens = nparens;
+#  endif
+#endif
 
     /* return the regexp */
     return rx;
@@ -310,10 +320,16 @@ PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
             else { /* no, fallback to core with codeblocks */
                 DEBUG_r(PerlIO_printf(Perl_debug_log,
                     "PCRE2 op_comp: codeblock. fallback to core\n"));
+#if PERL_VERSION > 36
+                //if (!Perl_re_op_compile) {
+                //    dynaload (perl.so);
+                //}
+#else
                 return Perl_re_op_compile
                     (aTHX_ patternp, pat_count, expr,
                      &PL_core_reg_engine,
                      old_re, is_bare_re, orig_rx_flags, pm_flags);
+#endif
             }
         }
     } else if (pat_count > 1) {
@@ -350,10 +366,12 @@ PCRE2_op_comp(pTHX_ SV ** const patternp, int pat_count,
         }
         if (can_concat)
             pattern = concat;
+#if PERL_VERSION < 37
         else
             return Perl_re_op_compile(aTHX_ patternp, pat_count, expr,
                                       &PL_core_reg_engine,
                                       old_re, is_bare_re, orig_rx_flags, pm_flags);
+#endif
     } else {
         pattern = *patternp;
     }
