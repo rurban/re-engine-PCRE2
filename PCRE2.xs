@@ -1,4 +1,5 @@
 /* -*- c-basic-offset:4 -*- */
+#define PERL_EXT_RE_BUILD
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
