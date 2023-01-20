@@ -464,8 +464,8 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         return 0;
     }
 
-    re->subbeg = strbeg;
     re->sublen = strend - strbeg;
+    re->subbeg = savepvn(strbeg, re->sublen);
 
     rc = pcre2_get_ovector_count(ridata->match_data);
     ovector = pcre2_get_ovector_pointer(ridata->match_data);
@@ -477,6 +477,7 @@ PCRE2_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     for (i = 0; i < rc; i++) {
         re->offs[i].start = ovector[i * 2];
         re->offs[i].end   = ovector[i * 2 + 1];
+
         DEBUG_r(PerlIO_printf(Perl_debug_log,
             "match[%d]: \"%.*s\" [%d,%d]\n",
             i, (int)(re->offs[i].end - re->offs[i].start), &stringarg[re->offs[i].start],
